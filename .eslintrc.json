@@ -1,0 +1,19 @@
+{
+    "env": {
+      "node": true,
+      "es2022": true,
+      "jest": true
+    },
+    "extends": [
+      "eslint:recommended",
+      "plugin:@typescript-eslint/recommended"
+    ],
+    "parser": "@typescript-eslint/parser",
+    "plugins": ["@typescript-eslint"],
+    "rules": {
+      "indent": ["error", 2],           /* 구글 표준: 들여쓰기 2칸 */
+      "quotes": ["error", "single"],    /* 구글 표준: 작은따옴표 사용 */
+      "semi": ["error", "always"],      /* 구글 표준: 세미콜론 필수 */
+      "camelcase": "error"              /* 구글 표준: 변수명은 카멜케이스 */
+    }
+  }

@@ -1,0 +1,25 @@
+# dependencies
+/node_modules
+
+# production (컴파일 결과물)
+/dist
+/build
+
+# 환경 변수 파일들 (보안)
+.env*
+.env.local
+.env.development
+.env.test
+
+# 예외: 템플릿 파일은 공유해야 함
+!.env.example
+
+# debug
+npm-debug.log*
+
+# typescript
+*.tsbuildinfo
+
+# OS 특정 파일 (맥/윈도우 충돌 방지)
+.DS_Store
+Thumbs.db
