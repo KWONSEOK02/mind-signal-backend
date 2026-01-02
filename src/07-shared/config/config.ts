@@ -1,6 +1,6 @@
-import dotenv from "dotenv";
+import dotenv from 'dotenv';
 
-if (process.env.NODE_ENV !== "production") {
+if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
 
@@ -30,11 +30,11 @@ interface Config {
 
 const config: Config = {
 
-  env: process.env.NODE_ENV ?? "development",
+  env: process.env.NODE_ENV ?? 'development',
   port: process.env.PORT ?? 5000,
   jwt: {
-    secret: process.env.JWT_SECRET_KEY ?? "your-secret",
-    expiresIn: "1d",
+    secret: process.env.JWT_SECRET_KEY ?? 'your-secret',
+    expiresIn: '1d',
   },
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID,

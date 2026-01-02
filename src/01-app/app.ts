@@ -1,18 +1,18 @@
-import express, { ErrorRequestHandler } from "express";
-import mongoose from "mongoose";
-import bodyParser from "body-parser";
-import cors from "cors";
-import indexRouter from "@01-app/app.router";
-import config from "@07-shared/config/config";
+import express, { ErrorRequestHandler } from 'express';
+import mongoose from 'mongoose';
+import bodyParser from 'body-parser';
+import cors from 'cors';
+import indexRouter from '@01-app/app.router';
+import config from '@07-shared/config/config';
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-app.use("/api", indexRouter);
+app.use('/api', indexRouter);
 
 // 전역 에러 핸들러에 ErrorRequestHandler 타입을 명시적으로 지정한다.
-const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
+const globalErrorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   // 어떤 요청에서 에러가 났는지 req 객체를 이용해 로그를 남긴다.
   console.error(`[${req.method}] ${req.originalUrl} - ERROR: ${error.message}`);
 
@@ -41,7 +41,7 @@ async function connectDB() {
   try {
     const mongoURI = config.mongo.uri;
     if (!mongoURI) {
-      throw new Error("MongoDB URI가 설정되지 않았습니다. (.env / config.ts 확인)");
+      throw new Error('MongoDB URI가 설정되지 않았습니다. (.env / config.ts 확인)');
     }
 
     // Mongoose v8 기준 기본값을 사용하며 타임아웃만 명시한다.
@@ -50,18 +50,18 @@ async function connectDB() {
       serverSelectionTimeoutMS: 10_000, 
     });
 
-    console.log("MongoDB 연결 성공");
+    console.log('MongoDB 연결 성공');
 
-    mongoose.connection.on("error", (err) => {
-      console.error("MongoDB 연결 에러:", err);
+    mongoose.connection.on('error', (err) => {
+      console.error('MongoDB 연결 에러:', err);
     });
 
     const PORT = Number(config.port) || 5000;
-    app.listen(PORT, "0.0.0.0", () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`\n API running at http://localhost:${PORT}`);
     });
   } catch (err) {
-    console.error("서버 시작 중 오류:", err);
+    console.error('서버 시작 중 오류:', err);
     process.exit(1);
   }
 }

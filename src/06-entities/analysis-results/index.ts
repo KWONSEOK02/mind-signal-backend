@@ -1,0 +1,1 @@
+export * from './model/analysis-result.schema';
