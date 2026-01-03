@@ -9,16 +9,18 @@ dotenv.config({ path: envPath });
 // 2. 필수 환경변수 목록 정의
 const REQUIRED_ENV_VARS = [
   'MONGODB_URI',
-  'JWT_SECRET',
+  'JWT_SECRET_KEY',
   //'GOOGLE_API_KEY',
-  //'GEMINI_API_KEY' 
+  //'GEMINI_API_KEY'
 ];
 
 // 3. 누락된 환경변수 검사 (production/staging 환경에서 특히 중요)
 if (nodeEnv !== 'test') {
   REQUIRED_ENV_VARS.forEach((key) => {
     if (!process.env[key]) {
-      throw new Error(`Critical Error: 환경변수 ${key}가 설정되지 않았습니다. (.env.${nodeEnv} 확인)`);
+      throw new Error(
+        `Critical Error: 환경변수 ${key}가 설정되지 않았습니다. (.env.${nodeEnv} 확인)`
+      );
     }
   });
 }
@@ -28,10 +30,10 @@ export const config = {
   env: nodeEnv,
   port: parseInt(process.env.PORT || '5000', 10),
   mongoUri: process.env.MONGODB_URI as string,
-  jwtSecret: process.env.JWT_SECRET as string,
+  jwtSecret: process.env.JWT_SECRET_KEY as string,
   googleApiKey: process.env.GOOGLE_API_KEY as string,
   geminiApiKey: process.env.GEMINI_API_KEY as string, // GEMINI_API_KEY 추가
-  
+
   isProduction: nodeEnv === 'production',
 } as const; // 읽기 전용으로 설정
 

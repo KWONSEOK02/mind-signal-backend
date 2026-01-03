@@ -14,24 +14,35 @@
 ## 3. 🚀 프로젝트 클론 및 각종 명령어
 
 ### 저장소 복제
+```bash
 git clone https://github.com/KWONSEOK02/mind-signal-backend.git
+```
 
 ### 의존성 설치
+```bash
 npm install
+```
 
 ### 환경 변수 설정
-.env.example 복사해서 .env.local 만들기(로컬) / .env.test 만들기(테스트)
+.env.example 복사해서 .env.local (로컬) / .env.test (테스트)파일을 생성합니다.
 
-###개발 서버 실행
+### 개발 서버 실행
 ```bash
 npm run dev 
+``` 
+### 테스트 서버 실행
+```bash
+npm run test
+``` 
+### prettier 실행 (코드 포맷 정리)
+```bash
+npm run format
 ``` 
 
 ### 린트 검사
 ```bash
- npm run lint
- npm run lint:fix
- npm run test
+npm run lint
+npm run lint:fix
  ``` 
 ---
 
