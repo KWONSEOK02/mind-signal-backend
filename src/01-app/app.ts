@@ -24,7 +24,7 @@ const globalErrorHandler: ErrorRequestHandler = (error, req, res, _next) => {
       message: error.message,
     });
   }
-  
+
   // 그 외의 예측하지 못한 에러는 500 서버 에러로 처리한다.
   console.error('UNEXPECTED ERROR', error);
   return res.status(500).json({
@@ -36,18 +36,19 @@ const globalErrorHandler: ErrorRequestHandler = (error, req, res, _next) => {
 // 타입이 지정된 에러 핸들러를 등록한다.
 app.use(globalErrorHandler);
 
-
 async function connectDB() {
   try {
     const mongoURI = config.mongo.uri;
     if (!mongoURI) {
-      throw new Error('MongoDB URI가 설정되지 않았습니다. (.env / config.ts 확인)');
+      throw new Error(
+        'MongoDB URI가 설정되지 않았습니다. (.env / config.ts 확인)'
+      );
     }
 
     // Mongoose v8 기준 기본값을 사용하며 타임아웃만 명시한다.
     await mongoose.connect(mongoURI, {
       // 10초 내 연결 실패 시 에러
-      serverSelectionTimeoutMS: 10_000, 
+      serverSelectionTimeoutMS: 10_000,
     });
 
     console.log('MongoDB 연결 성공');

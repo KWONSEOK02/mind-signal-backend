@@ -81,12 +81,14 @@ mind-signal-backend/
 │       ├── errors/         # 애플리케이션 공통 에러 정의
 │       └── lib/            # 공통 라이브러리, 헬퍼 함수
 │
-├── .env.development        # 개발 환경 변수 (Git 추적 제외)
 ├── .env.example            # 환경 변수 템플릿 (Git 추적)
 ├── .env.local              # 로컬 환경 변수 (Git 추적 제외)
 ├── .env.test               # 테스트 환경 변수 (Git 추적 제외)
 ├── .eslint.config.mjs      # ESLint 설정 파일
+├── .gitattributes          # Git 속성 설정 파일
 ├── .gitignore              # Git이 무시할 파일 및 폴더 목록
+├── .prettierignore         # Prettier가 무시할 파일 및 폴더 목록
+├── .prettierrc             # Prettier 설정 파일
 ├── jest.config.js          # Jest 테스트 설정 파일
 ├── package-lock.json       # 패키지 의존성 잠금 파일
 ├── package.json            # 프로젝트 메타데이터 및 스크립트

@@ -2,20 +2,31 @@ import { Schema, model, Model, HydratedDocument } from 'mongoose';
 
 /** 1. 문서 필드 타입 정의 (I 제거) */
 export interface ConsentVersion {
-  versionId: string;      // 버전 식별자 (예: 'v1.0')
-  requiredUrl: string;    // 필수 약관 URL
-  optionalUrl: string;    // 선택 약관 URL
-  termsHash: string;      // 약관 내용의 무결성 검증용 해시
-  effectiveAt: Date;      // 약관 발효 시점
+  versionId: string; // 버전 식별자 (예: 'v1.0')
+  requiredUrl: string; // 필수 약관 URL
+  optionalUrl: string; // 선택 약관 URL
+  termsHash: string; // 약관 내용의 무결성 검증용 해시
+  effectiveAt: Date; // 약관 발효 시점
 }
 
 export interface ConsentVersionMethods {}
 
-export type ConsentVersionDoc = HydratedDocument<ConsentVersion, ConsentVersionMethods>;
-export type ConsentVersionModel = Model<ConsentVersion, {}, ConsentVersionMethods>;
+export type ConsentVersionDoc = HydratedDocument<
+  ConsentVersion,
+  ConsentVersionMethods
+>;
+export type ConsentVersionModel = Model<
+  ConsentVersion,
+  {},
+  ConsentVersionMethods
+>;
 
 /** 2. 스키마 정의 */
-const consentVersionSchema = new Schema<ConsentVersion, ConsentVersionModel, ConsentVersionMethods>(
+const consentVersionSchema = new Schema<
+  ConsentVersion,
+  ConsentVersionModel,
+  ConsentVersionMethods
+>(
   {
     versionId: { type: String, required: true, unique: true },
     requiredUrl: { type: String, required: true },
@@ -23,9 +34,9 @@ const consentVersionSchema = new Schema<ConsentVersion, ConsentVersionModel, Con
     termsHash: { type: String, required: true },
     effectiveAt: { type: Date, required: true },
   },
-  { 
+  {
     timestamps: true,
-    collection: 'consentVersions' // 복수형 camelCase
+    collection: 'consentVersions', // 복수형 camelCase
   }
 );
 
@@ -39,5 +50,8 @@ consentVersionSchema.methods.toJSON = function () {
   return obj;
 };
 
-export const ConsentVersion = model<ConsentVersion, ConsentVersionModel>('ConsentVersion', consentVersionSchema);
+export const ConsentVersion = model<ConsentVersion, ConsentVersionModel>(
+  'ConsentVersion',
+  consentVersionSchema
+);
 export default ConsentVersion;

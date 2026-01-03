@@ -26,7 +26,13 @@ export type UserModel = Model<User, {}, UserMethods>;
 /** 4. 스키마 정의 */
 const userSchema = new Schema<User, UserModel, UserMethods>(
   {
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
     password: { type: String, required: true }, // 서비스에서 해싱 후 저장
     name: { type: String, required: true },
     brainType: { type: String, default: 'PENDING' },
@@ -37,9 +43,9 @@ const userSchema = new Schema<User, UserModel, UserMethods>(
     },
     membershipLevel: { type: String, default: 'BASIC' },
   },
-  { 
+  {
     timestamps: true, //
-    collection: 'users' 
+    collection: 'users',
   }
 );
 
@@ -60,11 +66,9 @@ userSchema.methods.generateToken = function (this: UserDoc): string {
     throw new Error('JWT secret is not defined in config');
   }
   // jwt.sign의 세 번째 인자가 SignOptions로 정확히 인식되도록 캐스팅
-  return jwt.sign(
-    { id: this._id.toString() }, 
-    jwtCfg.secret as string, 
-    { expiresIn: jwtCfg.expiresIn as SignOptions['expiresIn'] }
-  );
+  return jwt.sign({ id: this._id.toString() }, jwtCfg.secret as string, {
+    expiresIn: jwtCfg.expiresIn as SignOptions['expiresIn'],
+  });
 };
 
 const User = model<User, UserModel>('User', userSchema);

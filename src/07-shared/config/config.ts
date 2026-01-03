@@ -1,50 +1,39 @@
 import dotenv from 'dotenv';
+import path from 'path';
 
-if (process.env.NODE_ENV !== 'production') {
-  dotenv.config();
+// 1. 환경별 .env 파일 로드 (.env.local, .env.development, .env.test 등)
+const nodeEnv = process.env.NODE_ENV || 'local';
+const envPath = path.resolve(__dirname, `../../../.env.${nodeEnv}`);
+dotenv.config({ path: envPath });
+
+// 2. 필수 환경변수 목록 정의
+const REQUIRED_ENV_VARS = [
+  'MONGODB_URI',
+  'JWT_SECRET',
+  //'GOOGLE_API_KEY',
+  //'GEMINI_API_KEY' 
+];
+
+// 3. 누락된 환경변수 검사 (production/staging 환경에서 특히 중요)
+if (nodeEnv !== 'test') {
+  REQUIRED_ENV_VARS.forEach((key) => {
+    if (!process.env[key]) {
+      throw new Error(`Critical Error: 환경변수 ${key}가 설정되지 않았습니다. (.env.${nodeEnv} 확인)`);
+    }
+  });
 }
 
-// 애플리케이션에서 사용할 환경 변수들의 타입 정의
-interface Config {
-  env: string;
-  port: number | string;
+// 4. 설정 객체 내보내기
+export const config = {
+  env: nodeEnv,
+  port: parseInt(process.env.PORT || '5000', 10),
+  mongoUri: process.env.MONGODB_URI as string,
+  jwtSecret: process.env.JWT_SECRET as string,
+  googleApiKey: process.env.GOOGLE_API_KEY as string,
+  geminiApiKey: process.env.GEMINI_API_KEY as string, // GEMINI_API_KEY 추가
+  
+  isProduction: nodeEnv === 'production',
+} as const; // 읽기 전용으로 설정
 
-  jwt: {
-    secret: string;
-    expiresIn: string;
-  };
-  google: {
-    clientId: string | undefined;
-  };
-  mongo: {
-    uri: string | undefined;
-  };
-  gemini: {
-    apiKey: string | undefined;
-  };
-}
-
-// process.env에서 필요한 값들을 읽어서 config 객체로 정리
-// 이렇게 하면 코드 내에서 process.env를 직접 쓰지 않고,
-// config를 통해 접근할 수 있어 관리와 테스트가 편리해집니다.
-
-const config: Config = {
-
-  env: process.env.NODE_ENV ?? 'development',
-  port: process.env.PORT ?? 5000,
-  jwt: {
-    secret: process.env.JWT_SECRET_KEY ?? 'your-secret',
-    expiresIn: '1d',
-  },
-  google: {
-    clientId: process.env.GOOGLE_CLIENT_ID,
-  },
-  mongo: {
-    uri: process.env.MONGODB_URI_PROD,
-  },
-  gemini: {
-    apiKey: process.env.GEMINI_API_KEY,
-  }
-};
-
-export default config;
+console.log(`현재 구동 환경: ${config.env}`);
+console.log(`연결된 DB URI: ${config.mongoUri}`);

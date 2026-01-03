@@ -10,7 +10,10 @@ async function register(params: Partial<User>): Promise<UserDoc> {
   // 1. 필수 필드 검증 (타입 가드)
   // 여기서 undefined 여부를 체크해야 아래에서 빨간 줄이 사라집니다.
   if (!email || !password || !name) {
-    throw new AppError('필수 입력 정보(이메일, 이름, 비밀번호)가 누락되었습니다', 400);
+    throw new AppError(
+      '필수 입력 정보(이메일, 이름, 비밀번호)가 누락되었습니다',
+      400
+    );
   }
 
   // 2. 중복 확인
@@ -25,7 +28,7 @@ async function register(params: Partial<User>): Promise<UserDoc> {
   // 4. 저장 (확실히 string임을 검증했으므로 안전하게 전달 가능)
   const newUser = await userRepository.create({
     ...params,
-    email,      // 명시적으로 필수 값 전달
+    email, // 명시적으로 필수 값 전달
     name,
     password: hashedPassword,
     membershipLevel: params.membershipLevel ?? 'BASIC',

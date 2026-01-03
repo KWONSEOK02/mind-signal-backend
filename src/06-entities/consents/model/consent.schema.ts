@@ -2,10 +2,10 @@ import { Schema, model, Model, HydratedDocument, Types } from 'mongoose';
 
 /** 1. 문서 필드 타입 정의 */
 export interface Consent {
-  userId: Types.ObjectId;      // User 엔티티 참조
-  versionId: string;           // ConsentVersion의 versionId 참조
-  isResearchAgreed: boolean;   // 연구 활용 동의 여부
-  withdrawnAt: Date | null;    // 동의 철회 시점
+  userId: Types.ObjectId; // User 엔티티 참조
+  versionId: string; // ConsentVersion의 versionId 참조
+  isResearchAgreed: boolean; // 연구 활용 동의 여부
+  withdrawnAt: Date | null; // 동의 철회 시점
 }
 
 export interface ConsentMethods {}
@@ -22,9 +22,9 @@ const consentSchema = new Schema<Consent, ConsentModel, ConsentMethods>(
     isResearchAgreed: { type: Boolean, default: false },
     withdrawnAt: { type: Date, default: null },
   },
-  { 
+  {
     timestamps: true,
-    collection: 'consents' // 복수형
+    collection: 'consents', // 복수형
   }
 );
 
