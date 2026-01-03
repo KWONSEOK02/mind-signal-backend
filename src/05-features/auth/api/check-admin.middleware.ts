@@ -3,7 +3,11 @@ import { userRepository } from '@06-entities/users'; //
 import AppError from '@07-shared/errors/app.error';
 import { AuthedRequest } from '@07-shared/auth';
 
-export const checkAdmin = async (req: AuthedRequest, res: Response, next: NextFunction) => {
+export const checkAdmin = async (
+  req: AuthedRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     if (!req.userId) return next(new AppError('인증 정보가 없습니다.', 401));
 

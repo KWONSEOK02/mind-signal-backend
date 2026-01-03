@@ -16,7 +16,7 @@ async function findByEmail(email: string): Promise<UserDoc | null> {
   return (await User.findOne({ email }).select('+password')) as UserDoc | null;
 }
 
-/** * 새로운 사용자 생성 
+/** * 새로운 사용자 생성
  */
 async function create(input: CreateUserInput): Promise<UserDoc> {
   // 생성된 결과물도 'as UserDoc'으로 캐스팅
@@ -24,14 +24,14 @@ async function create(input: CreateUserInput): Promise<UserDoc> {
   return doc as UserDoc;
 }
 
-/** * 사용자 ID로 조회 
+/** * 사용자 ID로 조회
  */
 async function findById(id: string): Promise<UserDoc | null> {
   return (await User.findById(id)) as UserDoc | null;
 }
 
-export const userRepository = { 
-  findByEmail, 
+export const userRepository = {
+  findByEmail,
   create,
-  findById 
+  findById,
 };

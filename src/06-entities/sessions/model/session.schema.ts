@@ -1,14 +1,20 @@
 import { Schema, model, Model, HydratedDocument, Types } from 'mongoose';
 
-/** * 1. 문서 필드 타입 정의 
+/** * 1. 문서 필드 타입 정의
  * ERD(image_9869e2.png)의 필드와 Note A 규칙을 반영함
  */
 export interface Session {
-  pairingToken: string;       // 고유 페어링 토큰
+  pairingToken: string; // 고유 페어링 토큰
   userId: Types.ObjectId | null; // 초기에는 null이며 페어링 성공 시 업데이트
-  status: 'CREATED' | 'PAIRED' | 'MEASURING' | 'COMPLETED' | 'EXPIRED' | 'CANCELLED';
-  pairedAt: Date | null;      // 페어링 완료 시점
-  expiresAt: Date;            // 토큰 만료 시점
+  status:
+    | 'CREATED'
+    | 'PAIRED'
+    | 'MEASURING'
+    | 'COMPLETED'
+    | 'EXPIRED'
+    | 'CANCELLED';
+  pairedAt: Date | null; // 페어링 완료 시점
+  expiresAt: Date; // 토큰 만료 시점
 }
 
 /** 2. 인스턴스 메서드 타입 정의 */
@@ -20,38 +26,45 @@ export interface SessionMethods {
 export type SessionDoc = HydratedDocument<Session, SessionMethods>;
 export type SessionModel = Model<Session, {}, SessionMethods>;
 
-/** * 4. 스키마 정의 
+/** * 4. 스키마 정의
  */
 const sessionSchema = new Schema<Session, SessionModel, SessionMethods>(
   {
-    pairingToken: { 
-      type: String, 
-      required: true, 
-      unique: true, 
-      index: true 
+    pairingToken: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
     },
-    userId: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'User', 
-      default: null 
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
     },
     status: {
       type: String,
-      enum: ['CREATED', 'PAIRED', 'MEASURING', 'COMPLETED', 'EXPIRED', 'CANCELLED'],
+      enum: [
+        'CREATED',
+        'PAIRED',
+        'MEASURING',
+        'COMPLETED',
+        'EXPIRED',
+        'CANCELLED',
+      ],
       default: 'CREATED',
     },
-    pairedAt: { 
-      type: Date, 
-      default: null 
+    pairedAt: {
+      type: Date,
+      default: null,
     },
-    expiresAt: { 
-      type: Date, 
-      required: true 
+    expiresAt: {
+      type: Date,
+      required: true,
     },
   },
-  { 
+  {
     timestamps: true, // createdAt(생성일) 포함
-    collection: 'sessions' // 컬렉션 명은 복수형
+    collection: 'sessions', // 컬렉션 명은 복수형
   }
 );
 

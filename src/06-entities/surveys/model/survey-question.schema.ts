@@ -2,26 +2,37 @@ import { Schema, model, Model, HydratedDocument } from 'mongoose';
 
 /** 1. 문서 필드 타입 정의 (I 제거) */
 export interface SurveyQuestion {
-  category: string;      // 문항 카테고리 (예: 'personality', 'interest')
-  questionText: string;  // 질문 내용
-  answerType: string;    // 답변 형식 (예: 'scale', 'choice')
+  category: string; // 문항 카테고리 (예: 'personality', 'interest')
+  questionText: string; // 질문 내용
+  answerType: string; // 답변 형식 (예: 'scale', 'choice')
 }
 
 export interface SurveyQuestionMethods {}
 
-export type SurveyQuestionDoc = HydratedDocument<SurveyQuestion, SurveyQuestionMethods>;
-export type SurveyQuestionModel = Model<SurveyQuestion, {}, SurveyQuestionMethods>;
+export type SurveyQuestionDoc = HydratedDocument<
+  SurveyQuestion,
+  SurveyQuestionMethods
+>;
+export type SurveyQuestionModel = Model<
+  SurveyQuestion,
+  {},
+  SurveyQuestionMethods
+>;
 
 /** 2. 스키마 정의 */
-const surveyQuestionSchema = new Schema<SurveyQuestion, SurveyQuestionModel, SurveyQuestionMethods>(
+const surveyQuestionSchema = new Schema<
+  SurveyQuestion,
+  SurveyQuestionModel,
+  SurveyQuestionMethods
+>(
   {
     category: { type: String, required: true },
     questionText: { type: String, required: true },
     answerType: { type: String, required: true },
   },
-  { 
+  {
     timestamps: true,
-    collection: 'surveyQuestions' // 복수형 camelCase
+    collection: 'surveyQuestions', // 복수형 camelCase
   }
 );
 
@@ -35,5 +46,8 @@ surveyQuestionSchema.methods.toJSON = function () {
   return obj;
 };
 
-export const SurveyQuestion = model<SurveyQuestion, SurveyQuestionModel>('SurveyQuestion', surveyQuestionSchema);
+export const SurveyQuestion = model<SurveyQuestion, SurveyQuestionModel>(
+  'SurveyQuestion',
+  surveyQuestionSchema
+);
 export default SurveyQuestion;
