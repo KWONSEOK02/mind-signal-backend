@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
-import { userRepository } from '@06-entities/users'; //
-import AppError from '@07-shared/errors/app.error';
-import { AuthedRequest } from '@07-shared/auth';
+import { userRepository } from '@06-entities/users';
+import { AppError } from '@07-shared/errors';
+import { AuthedRequest } from '@07-shared/middlewares';
 
 export const checkAdmin = async (
   req: AuthedRequest,

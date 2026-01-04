@@ -1,2 +1,2 @@
-export * from './types';
 export * from './authenticate.middleware';
+export * from './validate.middleware';

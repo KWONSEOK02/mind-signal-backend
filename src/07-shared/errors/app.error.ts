@@ -1,7 +1,7 @@
 /**
  * 애플리케이션 전역에서 사용할 커스텀 에러 클래스를 정의한다.
  */
-class AppError extends Error {
+export class AppError extends Error {
   // HTTP 상태 코드를 저장할 프로퍼티를 선언한다.
   public statusCode: number;
   public status: string;
@@ -20,5 +20,3 @@ class AppError extends Error {
     Error.captureStackTrace(this, this.constructor);
   }
 }
-
-export default AppError;

@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import indexRouter from '@01-app/app.router';
-import config from '@07-shared/config/config';
+import { config } from '@07-shared/config/config';
 
 const app = express();
 app.use(cors());
@@ -38,7 +38,7 @@ app.use(globalErrorHandler);
 
 async function connectDB() {
   try {
-    const mongoURI = config.mongo.uri;
+    const mongoURI = config.mongoUri;
     if (!mongoURI) {
       throw new Error(
         'MongoDB URI가 설정되지 않았습니다. (.env / config.ts 확인)'
