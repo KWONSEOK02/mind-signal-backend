@@ -10,8 +10,9 @@ dotenv.config({ path: envPath });
 const REQUIRED_ENV_VARS = [
   'MONGODB_URI',
   'JWT_SECRET_KEY',
+  'JWT_EXPIRES_IN',
   //'GOOGLE_API_KEY',
-  //'GEMINI_API_KEY'
+  //'GEMINI_API_KEY',
 ];
 
 // 3. 누락된 환경변수 검사 (production/staging 환경에서 특히 중요)
@@ -30,10 +31,12 @@ export const config = {
   env: nodeEnv,
   port: parseInt(process.env.PORT || '5000', 10),
   mongoUri: process.env.MONGODB_URI as string,
-  jwtSecret: process.env.JWT_SECRET_KEY as string,
   googleApiKey: process.env.GOOGLE_API_KEY as string,
   geminiApiKey: process.env.GEMINI_API_KEY as string, // GEMINI_API_KEY 추가
-
+  jwtSecret: {
+    secret: process.env.JWT_SECRET_KEY as string,
+    expiresIn: process.env.JWT_EXPIRES_IN as string,
+  },
   isProduction: nodeEnv === 'production',
 } as const; // 읽기 전용으로 설정
 

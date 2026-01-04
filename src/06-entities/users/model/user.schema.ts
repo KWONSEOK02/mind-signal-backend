@@ -1,8 +1,8 @@
 import { Schema, model, Model, HydratedDocument } from 'mongoose';
 import jwt, { SignOptions } from 'jsonwebtoken';
-import config from '@07-shared/config/config'; //
+import { config } from '@07-shared/config/config'; //
 
-const { jwt: jwtCfg } = config;
+const { jwtSecret: jwtCfg } = config;
 
 /** 1. 문서 필드 타입 */
 export interface User {

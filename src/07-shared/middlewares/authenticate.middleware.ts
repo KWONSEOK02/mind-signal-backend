@@ -1,8 +1,8 @@
 import { Response, NextFunction } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
-import config from '@07-shared/config/config';
-import AppError from '@07-shared/errors/app.error';
-import { AuthedRequest } from '@07-shared/auth';
+import { config } from '@07-shared/config/config';
+import { AppError } from '@07-shared/errors';
+import { AuthedRequest } from '@07-shared/types';
 
 export const authenticate = (
   req: AuthedRequest,
@@ -16,10 +16,9 @@ export const authenticate = (
 
   try {
     const token = authHeader.split(' ')[1];
-    // 정답: 'uri'가 아닌 'secret'을 사용하고 string으로 캐스팅
     const payload = jwt.verify(
       token,
-      config.jwt.secret as string
+      config.jwtSecret.secret as string
     ) as JwtPayload;
 
     req.userId = payload.id;

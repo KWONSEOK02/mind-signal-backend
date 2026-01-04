@@ -10,6 +10,7 @@
     "build": "tsc && tsc-alias",
     "start": "node -r tsconfig-paths/register ./dist/01-app/app.js",
     "test": "jest",
+    "test:watch": "cross-env NODE_ENV=test jest --watchAll",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\""
@@ -25,10 +26,12 @@
     "mongoose": "^9.1.1",
     "multer": "^2.0.2",
     "pdf-parse": "^2.4.5",
+    "supertest": "^7.1.4",
     "tsconfig-paths": "^4.2.0",
     "zod": "^4.3.4"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.1.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
