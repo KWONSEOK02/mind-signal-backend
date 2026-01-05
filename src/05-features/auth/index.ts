@@ -1,4 +1,4 @@
-export * from './api/check-admin.middleware';
+//export * from './api/check-admin.middleware';
 export { default as authServiceService } from './services/auth.service';
 export { default as authService } from './services/auth.service';
 export { default as authApi } from './api/auth.routes';
