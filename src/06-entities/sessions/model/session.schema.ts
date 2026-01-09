@@ -20,6 +20,8 @@ export interface Session {
 /** 2. 인스턴스 메서드 타입 정의 */
 export interface SessionMethods {
   isExpired(): boolean;
+  // 추가: 상태 전이 가능 여부 확인 (Note A 규칙 반영)
+  canTransitionTo(nextStatus: Session['status']): boolean;
 }
 
 /** 3. Mongoose 편의 타입 */
@@ -79,11 +81,33 @@ sessionSchema.methods.toJSON = function () {
   return obj;
 };
 
-/** * 6. 인스턴스 메서드 구현: 만료 여부 확인 (Note A-1 규칙)
- * 비즈니스 로직은 서비스에서 처리하는 것이 좋으나, 간단한 상태 확인은 메서드로 구현 가능합니다.
- */
+/** 6. 인스턴스 메서드 구현 */
 sessionSchema.methods.isExpired = function (this: SessionDoc): boolean {
   return this.expiresAt < new Date();
+};
+
+sessionSchema.methods.canTransitionTo = function (
+  this: SessionDoc,
+  nextStatus: Session['status']
+): boolean {
+  const current = this.status;
+
+  // 1. 만료된 경우 EXPIRED 외에는 전이 불가 (Note A-1)
+  if (this.isExpired() && current === 'CREATED') {
+    return nextStatus === 'EXPIRED';
+  }
+
+  // 2. 상태별 전이 규칙 (Note A-2)
+  const transitions: Record<Session['status'], Session['status'][]> = {
+    CREATED: ['PAIRED', 'EXPIRED', 'CANCELLED'],
+    PAIRED: ['MEASURING', 'CANCELLED'],
+    MEASURING: ['COMPLETED', 'CANCELLED'],
+    COMPLETED: [], // 최종 상태
+    EXPIRED: [], // 최종 상태
+    CANCELLED: [], // 최종 상태
+  };
+
+  return transitions[current].includes(nextStatus);
 };
 
 /** 7. 모델 생성 및 수출 */
