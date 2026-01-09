@@ -1,5 +1,6 @@
 import { Session } from '@06-entities/sessions';
 import { Types } from 'mongoose';
+import { AppError } from '@07-shared/errors';
 
 /**
  * Phase 1.5: 모바일 기기 페어링 프로세스
@@ -26,11 +27,11 @@ export const pairDeviceProcess = async (
   if (session.isExpired()) {
     session.status = 'EXPIRED';
     await session.save();
-    throw new Error('TOKEN_EXPIRED');
+    throw new AppError('페어링 토큰이 만료되었습니다. 다시 시도해주세요.', 401);
   }
 
   if (!session.canTransitionTo('PAIRED')) {
-    throw new Error(`CANNOT_PAIR_FROM_STATUS_${session.status}`);
+    throw new AppError(`현재 세션 상태(${session.status})에서는 페어링할 수 없습니다.`, 400);
   }
 
   // 3. 페어링 정보 업데이트 (Note A-3)

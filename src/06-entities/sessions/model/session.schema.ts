@@ -103,7 +103,7 @@ sessionSchema.methods.canTransitionTo = function (
     PAIRED: ['MEASURING', 'CANCELLED'],
     MEASURING: ['COMPLETED', 'CANCELLED'],
     COMPLETED: [], // 최종 상태
-    EXPIRED: [],   // 최종 상태
+    EXPIRED: [], // 최종 상태
     CANCELLED: [], // 최종 상태
   };
 

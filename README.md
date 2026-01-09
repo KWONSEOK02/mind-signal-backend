@@ -52,6 +52,9 @@ npm run lint:fix
 | **POST** | `/auth/signup` | 회원가입 |
 | **POST** | `/auth/login` | 로그인 |
 | **GET** | `/user/me` | 내 정보 조회 |
+| **POST** | `/sessions` | 페어링 세션 생성 (Phase 1) |
+| **POST** | `/sessions/:pairingToken/pair` | 모바일 기기 페어링 연결 (Phase 1.5-A) |
+| **POST** | `/sessions/:sessionId/consents` | 동의서 제출 및 스냅샷 생성 (Phase 1.5-B) |
 ---
 
 ## 5. 📁 프로젝트 구조
@@ -73,6 +76,7 @@ mind-signal-backend/
 │   ├── 05-features/        # 특정 기능 구현 (예: 인증, 사용자 관리)
 │   │   ├── analyze-eeg/    # EEG 분석 기능
 │   │   ├── auth/           # 인증 유스케이스(로그인/가입/토큰 발급·갱신/로그아웃 등) + 라우트 단위 로직
+│   │   ├── sessions/       # PC-모바일 간 기기 페어링 연동 및 측정 전 동의 제출 프로세스 관리
 │   │   └── users/          # 사용자 관리 기능
 │   │
 │   ├── 06-entities/        # 도메인 엔티티 (데이터 모델, 스키마, CRUD 로직)
@@ -81,7 +85,7 @@ mind-signal-backend/
 │   │   ├── eeg-records/         # 측정된 뇌파 원천 데이터 및 로그 정보
 │   │   ├── matching-pools/      # 분석 점수 기반의 사용자 간 매칭 데이터
 │   │   ├── neuro-chats/         # AI 상담원 '뉴로'와의 상호작용 대화 로그
-│   │   ├── sessions/            # 기기 페어링 및 데이터 측정 세션 상태 관리
+│   │   ├── sessions/            # 기기 페어링 토큰 발급 및 세션 생명주기(Status Machine) 관리
 │   │   ├── surveys/             # 사용자 성향 분석용 설문 문항 및 응답 데이터
 │   │   └── users/               # 사용자 계정 정보 및 뇌파 유형/멤버십 프로필
 │   │
@@ -113,8 +117,8 @@ mind-signal-backend/
 
 이 프로젝트의 FSD (Feature-Sliced Design) 폴더 구조는 다음과 같은 원칙에 따라 README.md에 표현됩니다:
 
-- **`01-app/` 및 `07-shared/`**: 애플리케이션의 엔트리/전역 규약(예: app wiring, 전역 미들웨어, 공통 에러/설정 등)을 담는 계층입니다. 온보딩에 중요한 진입점이 있는 경우, README에 내부 구조를 상대적으로 상세히 표기합니다.
-- **`02-processes/` ~ `06-entities/`**: 비즈니스 도메인/기능 단위로 확장되는 계층입니다. README에는 최상위 폴더(도메인)만 노출하고, 내부 구현은 원칙적으로 각 도메인의 `index.ts` (Public API)를 통해 접근하도록 합니다. 이를 통해 계층 간 결합도를 낮추고 내부 변경의 영향을 최소화합니다.
+- **`01-app/` 및 `07-shared/`**: 애플리케이션의 엔트리/전역 규약(예: app wiring, 전역 미들웨어, 공통 에러/설정 등)을 담는 계층입니다. **이 계층 내에서는 `01-app/`의 모든 내부 파일과 `07-shared/config/config.ts` 파일의 존재를 상세히 표기합니다.** 온보딩에 중요한 진입점이 있는 경우, README에 내부 구조를 상대적으로 상세히 표기합니다.
+- **`02-processes/` ~ `06-entities/`**: 비즈니스 도메인/기능 단위로 확장되는 계층입니다. README에는 최상위 폴더(도메인)만 노출하고, **그 하위 계층(예: `05-features/auth/` 또는 `06-entities/users/`)은 1단계 하위 폴더까지만 표시합니다.** 내부 파일 및 더 깊은 하위 폴더 구조는 원칙적으로 각 도메인의 `index.ts` (Public API)를 통해 접근하도록 합니다. 이를 통해 계층 간 결합도를 낮추고 내부 변경의 영향을 최소화합니다.
 - **세분화 기준**: 한 폴더에 파일이 증가해 가독성이 떨어지면(예: 6~8개 이상) `api/`, `model/`, `lib/` 등 하위 폴더로 점진적으로 분리하는 것을 원칙으로 합니다.
 
 ---
