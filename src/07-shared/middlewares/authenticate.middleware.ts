@@ -21,7 +21,7 @@ export const authenticate = (
       config.jwtSecret.secret as string
     ) as JwtPayload;
 
-    req.userId = payload.id;
+    (req as any).user = { id: payload.id };
     next();
   } catch {
     next(new AppError('유효하지 않은 토큰입니다.', 401));
