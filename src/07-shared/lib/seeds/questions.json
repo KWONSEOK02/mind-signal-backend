@@ -1,0 +1,22 @@
+[
+    {
+      "category": "personality",
+      "questionText": "나는 처음 보는 사람과 대화하는 것이 즐겁다.",
+      "answerType": "scale"
+    },
+    {
+      "category": "personality",
+      "questionText": "계획이 틀어져도 크게 당황하지 않는다.",
+      "answerType": "scale"
+    },
+    {
+      "category": "interest",
+      "questionText": "최근 뇌파 관련 기술에 흥미를 느낀 적이 있다.",
+      "answerType": "scale"
+    },
+    {
+      "category": "interest",
+      "questionText": "평소 가장 자주 듣는 음악 장르는?",
+      "answerType": "choice"
+    }
+  ]
