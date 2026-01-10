@@ -31,7 +31,10 @@ export const pairDeviceProcess = async (
   }
 
   if (!session.canTransitionTo('PAIRED')) {
-    throw new AppError(`현재 세션 상태(${session.status})에서는 페어링할 수 없습니다.`, 400);
+    throw new AppError(
+      `현재 세션 상태(${session.status})에서는 페어링할 수 없습니다.`,
+      400
+    );
   }
 
   // 3. 페어링 정보 업데이트 (Note A-3)

@@ -55,6 +55,9 @@ npm run lint:fix
 | **POST** | `/sessions` | 페어링 세션 생성 (Phase 1) |
 | **POST** | `/sessions/:pairingToken/pair` | 모바일 기기 페어링 연결 (Phase 1.5-A) |
 | **POST** | `/sessions/:sessionId/consents` | 동의서 제출 및 스냅샷 생성 (Phase 1.5-B) |
+| **GET** | `/surveys/questions` | 사용자에게 보여줄 모든 설문 문항 목록 조회 |
+| **POST** | `/surveys/responses` | 사용자가 작성한 설문 응답들을 일괄 저장 |
+| **GET** | `/surveys/responses` | 로그인한 사용자가 제출한 설문 응답 목록 조회 |
 ---
 
 ## 5. 📁 프로젝트 구조

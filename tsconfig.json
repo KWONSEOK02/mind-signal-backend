@@ -15,6 +15,7 @@
       },
       "rootDir": "src",             /* 실제 소스 코드가 위치한 곳 */
       "outDir": "dist",             /* 빌드 결과물(JavaScript)이 저장될 폴더 */
+      "resolveJsonModule": true,      /*JSON 파일 임포트 허용 */
       "esModuleInterop": true,      /* import/require 호환성 해결 (Express 등 사용 시 필수) */
       "forceConsistentCasingInFileNames": true, /* 구글 표준: 파일명 대소문자 엄격 구분 */
       "strict": true,               /* 엄격한 타입 검사로 런타임 에러 방지 */

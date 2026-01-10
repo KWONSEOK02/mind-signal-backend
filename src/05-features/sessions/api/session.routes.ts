@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as sessionsController from './session.controller';
-import { authenticate } from '@07-shared/middlewares/authenticate.middleware'; // 인증 미들웨어
+import { authenticate } from '@07-shared/middlewares'; // 인증 미들웨어
 
 const router = Router();
 
@@ -13,6 +13,10 @@ const router = Router();
 // 반드시 컨트롤러 앞에서 인증을 통해서 req.user를 확보해야 함
 router.post('/', authenticate, sessionsController.createSession);
 router.post('/:pairingToken/pair', authenticate, sessionsController.pairDevice);
-router.post('/:sessionId/consents', authenticate, sessionsController.submitConsent);
+router.post(
+  '/:sessionId/consents',
+  authenticate,
+  sessionsController.submitConsent
+);
 
 export default router;
