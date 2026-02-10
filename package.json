@@ -14,7 +14,11 @@
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
-    "seed": "ts-node -r tsconfig-paths/register ./src/07-shared/lib/seeds/seed.ts"
+    "seed": "ts-node -r tsconfig-paths/register ./src/07-shared/lib/seeds/seed.ts",
+    "infra:up": "docker-compose up -d",
+    "infra:down": "docker-compose down",
+    "test:redis": "docker exec -it mind-signal-redis redis-cli subscribe mind-signal-live",
+    "data:run": "cd ../mind-signal-data-engine && python -m core.streamer"
   },
   "description": "Mind Signal Project Backend",
   "dependencies": {
