@@ -44,6 +44,16 @@ npm run format
 npm run lint
 npm run lint:fix
  ``` 
+
+### 도커 실행 및 redis 태스트 실행
+```bash
+npm run infra:up
+npm run infra:down
+npm run test:redis
+npm run data:run
+
+```
+
 ---
 
 ## 4. API 엔드포인트
@@ -55,6 +65,7 @@ npm run lint:fix
 | **POST** | `/sessions` | 페어링 세션 생성 (Phase 1) |
 | **POST** | `/sessions/:pairingToken/pair` | 모바일 기기 페어링 연결 (Phase 1.5-A) |
 | **POST** | `/sessions/:sessionId/consents` | 동의서 제출 및 스냅샷 생성 (Phase 1.5-B) |
+| **POST** | `/measurements/sessions/:sessionId/eeg/stream:start` | 실시간 뇌파 스트리밍 시작 및 외부 엔진 트리거 (Phase 2) |
 | **GET** | `/surveys/questions` | 사용자에게 보여줄 모든 설문 문항 목록 조회 |
 | **POST** | `/surveys/responses` | 사용자가 작성한 설문 응답들을 일괄 저장 |
 | **GET** | `/surveys/responses` | 로그인한 사용자가 제출한 설문 응답 목록 조회 |
@@ -70,14 +81,14 @@ mind-signal-backend/
 │   │   ├── app.router.ts
 │   │   └── app.ts
 │   │
-│   ├── 02-processes/       # 비즈니스 프로세스 및 워크플로우 (여러 피처를 조합)
+│   ├── 02-processes/       # 비즈니스 프로세스 및 워크플로우 (복잡한 여러 features를 조합)
+│   │   └── measurements/   # 실시간 스트리밍 프로세스 및 외부 엔진 오케스트레이션
 │   │
-│   ├── 03-pages/           # 페이지 수준의 로직 (현재는 백엔드이므로 비어있을 수 있음)
+│   ├── 03-pages/           # 페이지 수준의 로직 (현재는 백엔드이므로 비어있음)
 │   │
 │   ├── 04-widgets/         # 위젯 (재사용 가능한 UI 컴포넌트, 백엔드에서는 드물게 사용)
 │   │
 │   ├── 05-features/        # 특정 기능 구현 (예: 인증, 사용자 관리)
-│   │   ├── analyze-eeg/    # EEG 분석 기능
 │   │   ├── auth/           # 인증 유스케이스(로그인/가입/토큰 발급·갱신/로그아웃 등) + 라우트 단위 로직
 │   │   ├── sessions/       # PC-모바일 간 기기 페어링 연동 및 측정 전 동의 제출 프로세스 관리
 │   │   ├── surveys/        # 사용자 성향 분석용 설문 문항 및 응답 데이터
@@ -110,6 +121,7 @@ mind-signal-backend/
 ├── .gitignore              # Git이 무시할 파일 및 폴더 목록
 ├── .prettierignore         # Prettier가 무시할 파일 및 폴더 목록
 ├── .prettierrc             # Prettier 설정 파일
+├── docker-compose.yml      # 로컬 개발 인프라(Redis 등) 컨테이너 설정 및 구동 명세서
 ├── jest.config.js          # Jest 테스트 설정 파일
 ├── package-lock.json       # 패키지 의존성 잠금 파일
 ├── package.json            # 프로젝트 메타데이터 및 스크립트
@@ -127,7 +139,32 @@ mind-signal-backend/
 
 ---
 
-## 6. 🤝 협업 가이드라인 (Contribution Guidelines)
+## 6. 02-processes 계층과 05-features 계층 중에 controller를 배치하는 기준
+
+Phase 1: PC(Web) 페어링 페이지 → QR 띄우기
+Phase 1.5: 모바일 QR 스캔 & 동의
+Phase 2: EEG 측정 및 데이터 저장
+Phase 3: 분석 & 피드백
+
+-02-processes 계층에 controller를 배치하는 경우
+기준: 여러 도메인 엔티티가 섞이거나, 외부 인프라(Redis, Data-Engine)와의 복잡한 오케스트레이션이 필요한 경우.
+
+사례:
+Phase 1.5 ~ 2 (Pairing & Streaming): QR 스캔, 세션 상태 전환, 외부 엔진 실행, 실시간 데이터 브릿징이 유기적으로 연결되어야 함.
+Phase 3 (Analysis): 측정 데이터 수집 완료 후 AI 모델 호출 및 결과 가공 등 복합적인 비즈니스 로직 수행.
+
+-05-features 계층에 controller를 배치하는 경우
+기준: 단일 도메인에 국한된 독립적인 기능이거나, 상위 계층(Processes)의 로직을 호출할 필요가 없는 단순 CRUD 기능인 경우.
+
+사례:
+Auth, Users, Surveys: 다른 복잡한 프로세스와의 결합 없이 독립적으로 동작 가능.
+Sessions: **QR 코드를 보여주기 위한 세션 생성/조회 기능만** 05-features 계층에 배치, **측정을 시작하는 POST 요청**은 02-processes/measurement에서 처리
+
+[draw.io v1.1 스키마 + 프로그램 동작](https://drive.google.com/file/d/1M-I8KD0ooohrz1stDZWki-oXhXVrb3eM/view?usp=drive_link)
+
+---
+
+## 7. 🤝 협업 가이드라인 (Contribution Guidelines)
 
 ### Git Workflow
 - `master` (Production): 최종 배포 브랜치

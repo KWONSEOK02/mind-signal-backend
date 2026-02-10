@@ -38,6 +38,16 @@ export const config = {
     expiresIn: process.env.JWT_EXPIRES_IN as string,
   },
   isProduction: nodeEnv === 'production',
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: process.env.REDIS_PORT || '6379',
+  },
+  dataEngine: {
+    // 환경 변수에서 가져오되, 없을 경우를 대비해 기본값을 설정할 수 있습니다.
+    path: path.resolve(
+      process.env.DATA_ENGINE_PATH || '../mind-signal-data-engine'
+    ),
+  },
 } as const; // 읽기 전용으로 설정
 
 console.log(`현재 구동 환경: ${config.env}`);

@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  # Redis: 백엔드와 파이썬 엔진 사이의 데이터 중계 브로커
+  redis:
+    image: redis:latest
+    container_name: mind-signal-redis
+    ports:
+      - "6379:6379"
+    restart: always
