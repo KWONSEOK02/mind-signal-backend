@@ -2,11 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import userService from '@05-features/users/services/user.service';
 
 const userController = {
-  getUser: async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
+  getUser: async (req: Request, res: Response, next: NextFunction) => {
     try {
       // authenticate 미들웨어에서 넣어준 userId를 사용합니다.
       const userId = (req as any).user?.id;

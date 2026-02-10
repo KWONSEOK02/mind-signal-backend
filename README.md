@@ -70,9 +70,9 @@ mind-signal-backend/
 │   │   ├── app.router.ts
 │   │   └── app.ts
 │   │
-│   ├── 02-processes/       # 비즈니스 프로세스 및 워크플로우 (여러 피처를 조합)
+│   ├── 02-processes/       # 비즈니스 프로세스 및 워크플로우 (복잡한 여러 features를 조합)
 │   │
-│   ├── 03-pages/           # 페이지 수준의 로직 (현재는 백엔드이므로 비어있을 수 있음)
+│   ├── 03-pages/           # 페이지 수준의 로직 (현재는 백엔드이므로 비어있음)
 │   │
 │   ├── 04-widgets/         # 위젯 (재사용 가능한 UI 컴포넌트, 백엔드에서는 드물게 사용)
 │   │
@@ -127,7 +127,32 @@ mind-signal-backend/
 
 ---
 
-## 6. 🤝 협업 가이드라인 (Contribution Guidelines)
+## 6. 02-processes 계층과 05-features 계층 중에 controller를 배치하는 기준
+
+Phase 1: PC(Web) 페어링 페이지 → QR 띄우기
+Phase 1.5: 모바일 QR 스캔 & 동의
+Phase 2: EEG 측정 및 데이터 저장
+Phase 3: 분석 & 피드백
+
+-02-processes 계층에 controller를 배치하는 경우
+기준: 여러 도메인 엔티티가 섞이거나, 외부 인프라(Redis, Data-Engine)와의 복잡한 오케스트레이션이 필요한 경우.
+
+사례:
+Phase 1.5 ~ 2 (Pairing & Streaming): QR 스캔, 세션 상태 전환, 외부 엔진 실행, 실시간 데이터 브릿징이 유기적으로 연결되어야 함.
+Phase 3 (Analysis): 측정 데이터 수집 완료 후 AI 모델 호출 및 결과 가공 등 복합적인 비즈니스 로직 수행.
+
+-05-features 계층에 controller를 배치하는 경우
+기준: 단일 도메인에 국한된 독립적인 기능이거나, 상위 계층(Processes)의 로직을 호출할 필요가 없는 단순 CRUD 기능인 경우.
+
+사례:
+Auth, Users, Surveys: 다른 복잡한 프로세스와의 결합 없이 독립적으로 동작 가능.
+Sessions: **QR 코드를 보여주기 위한 세션 생성/조회 기능만** 05-features 계층에 배치, **측정을 시작하는 POST 요청**은 02-processes/measurement에서 처리
+
+[draw.io v1.1 스키마 + 프로그램 동작](https://drive.google.com/file/d/1M-I8KD0ooohrz1stDZWki-oXhXVrb3eM/view?usp=drive_link)
+
+---
+
+## 7. 🤝 협업 가이드라인 (Contribution Guidelines)
 
 ### Git Workflow
 - `master` (Production): 최종 배포 브랜치
