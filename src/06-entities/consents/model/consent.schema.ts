@@ -32,6 +32,7 @@ const consentSchema = new Schema<Consent, ConsentModel, ConsentMethods>(
 consentSchema.methods.toJSON = function () {
   const obj = this.toObject() as any;
   obj.id = obj._id;
+  delete obj._id;
   delete obj.updatedAt;
   delete obj.createdAt;
   delete obj.__v;

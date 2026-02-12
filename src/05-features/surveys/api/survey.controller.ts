@@ -15,8 +15,8 @@ export const getQuestions = async (
       status: 'success',
       data: questions,
     });
-  } catch (err) {
-    next(err); // 서비스에서 던진 AppError(404 등)가 중앙 핸들러로 전달됨
+  } catch (error) {
+    return next(error); // 서비스에서 던진 AppError(404 등)가 중앙 핸들러로 전달됨
   }
 };
 
@@ -33,8 +33,8 @@ export const submitResponses = async (
       status: 'success',
       data: { count: result.length },
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    return next(error);
   }
 };
 
@@ -52,7 +52,7 @@ export const getUserResponses = async (
       status: 'success',
       data: responses,
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    return next(error);
   }
 };
