@@ -1,4 +1,11 @@
 import swaggerJSDoc from 'swagger-jsdoc';
+import { config } from '@07-shared/config/config';
+
+const serverUrl =
+  process.env.PUBLIC_BASE_URL ||
+  (config.isProduction
+    ? 'https://mind-signal-backend-74ab2db9e087.herokuapp.com'
+    : `http://localhost:${config.port}`);
 
 const options: swaggerJSDoc.Options = {
   definition: {
@@ -8,11 +15,7 @@ const options: swaggerJSDoc.Options = {
       version: '1.0.0',
       description: '뇌파 시그널 프로젝트 API 명세서',
     },
-    servers: [
-      {
-        url: 'http://localhost:5000',
-      },
-    ],
+    servers: [{ url: serverUrl }],
     components: {
       securitySchemes: {
         bearerAuth: {
@@ -23,11 +26,10 @@ const options: swaggerJSDoc.Options = {
       },
     },
   },
-  // FSD 구조 내의 모든 라우트 관련 파일을 스캔하도록 설정
   apis: [
     './src/01-app/app.ts',
-    './src/02-processes/**/*.ts', // 프로세스 계층 내 컨트롤러/라우트
-    './src/05-features/**/*.ts', // 기능 계층 내 컨트롤러/라우트
+    './src/02-processes/**/*.ts',
+    './src/05-features/**/*.ts',
   ],
 };
 
