@@ -13,6 +13,7 @@ export const saveSurveyResponses = async (
   if (!data.responses || data.responses.length === 0) {
     throw new AppError('제출할 응답 데이터가 없습니다.', 400); // 400 에러 명시
   }
+
   const responsesToSave = data.responses.map((resp) => ({
     userId,
     questionId: resp.questionId,

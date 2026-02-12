@@ -23,3 +23,5 @@ npm-debug.log*
 # OS 특정 파일 (맥/윈도우 충돌 방지)
 .DS_Store
 Thumbs.db
+
+# 기타

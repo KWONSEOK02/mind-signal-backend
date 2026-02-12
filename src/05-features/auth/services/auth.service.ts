@@ -70,7 +70,7 @@ async function loginWithEmail({
 
   // 2) 사용자 없음 / 비밀번호 불일치
   if (!user || !(await bcrypt.compare(password, (user as any).password))) {
-    throw new AppError('아이디 또는 비밀번호가 일치하지 않습니다', 401);
+    throw new AppError('아이디 또는 비밀번호가 일치하지 않습니다.', 401);
   }
 
   // 3) 토큰 발급

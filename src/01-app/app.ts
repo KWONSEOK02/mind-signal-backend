@@ -2,6 +2,8 @@ import express, { ErrorRequestHandler } from 'express';
 import mongoose from 'mongoose';
 import bodyParser from 'body-parser';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
+import { specs } from '@07-shared/config/swagger';
 import indexRouter from '@01-app/app.router';
 import { config } from '@07-shared/config/config';
 
@@ -9,6 +11,8 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 app.use('/api', indexRouter);
 
 // 전역 에러 핸들러에 ErrorRequestHandler 타입을 명시적으로 지정한다.

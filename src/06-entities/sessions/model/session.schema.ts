@@ -1,7 +1,7 @@
 import { Schema, model, Model, HydratedDocument, Types } from 'mongoose';
 
 /** * 1. 문서 필드 타입 정의
- * ERD(image_9869e2.png)의 필드와 Note A 규칙을 반영함
+ * ERD의 필드와 Note A 규칙을 반영함
  */
 export interface Session {
   pairingToken: string; // 고유 페어링 토큰
@@ -15,6 +15,7 @@ export interface Session {
     | 'CANCELLED';
   pairedAt: Date | null; // 페어링 완료 시점
   expiresAt: Date; // 토큰 만료 시점
+  measuredAt: Date | null; // 측정 시작 시점
 }
 
 /** 2. 인스턴스 메서드 타입 정의 */
@@ -63,9 +64,13 @@ const sessionSchema = new Schema<Session, SessionModel, SessionMethods>(
       type: Date,
       required: true,
     },
+    measuredAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
-    timestamps: true, // createdAt(생성일) 포함
+    timestamps: true, // createdAt, updatedAt 자동 생성
     collection: 'sessions', // 컬렉션 명은 복수형
   }
 );
@@ -75,6 +80,7 @@ const sessionSchema = new Schema<Session, SessionModel, SessionMethods>(
 sessionSchema.methods.toJSON = function () {
   const obj = this.toObject() as any;
   obj.id = obj._id;
+  delete obj._id;
   delete obj.updatedAt;
   delete obj.createdAt;
   delete obj.__v;
@@ -102,9 +108,9 @@ sessionSchema.methods.canTransitionTo = function (
     CREATED: ['PAIRED', 'EXPIRED', 'CANCELLED'],
     PAIRED: ['MEASURING', 'CANCELLED'],
     MEASURING: ['COMPLETED', 'CANCELLED'],
-    COMPLETED: [], // 최종 상태
-    EXPIRED: [], // 최종 상태
-    CANCELLED: [], // 최종 상태
+    COMPLETED: [], // 측정 종료 요청
+    EXPIRED: [], // 유효 시간 초과
+    CANCELLED: [], // 통신 오류 또는 강제 종료
   };
 
   return transitions[current].includes(nextStatus);
