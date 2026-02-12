@@ -14,8 +14,9 @@ export const startMeasurementService = async (sessionId: string) => {
 
   // 2. 상태 전이 비즈니스 규칙 검사
   if (!session.canTransitionTo('MEASURING')) {
-    throw new Error(
-      `현재 ${session.status} 상태에서는 측정을 시작할 수 없습니다.`
+    throw new AppError(
+      `현재 ${session.status} 상태에서는 측정을 시작할 수 없습니다.`,
+      400
     );
   }
 

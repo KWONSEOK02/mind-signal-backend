@@ -1,6 +1,6 @@
 import { Schema, model, Model, HydratedDocument } from 'mongoose';
 import jwt, { SignOptions } from 'jsonwebtoken';
-import { config } from '@07-shared/config/config'; //
+import { config } from '@07-shared/config/config';
 
 const { jwtSecret: jwtCfg } = config;
 
@@ -53,6 +53,7 @@ const userSchema = new Schema<User, UserModel, UserMethods>(
 userSchema.methods.toJSON = function () {
   const obj = this.toObject() as any;
   obj.id = obj._id; // _id를 id로 노출
+  delete obj._id;
   delete obj.password; // 보안 필드 삭제
   delete obj.updatedAt;
   delete obj.createdAt;

@@ -25,7 +25,7 @@ export const createSession = async (
     await newSession.save();
 
     res.status(201).json({
-      success: true,
+      status: 'success',
       data: {
         pairingToken: newSession.pairingToken,
         sessionId: newSession._id,
@@ -60,7 +60,7 @@ export const pairDevice = async (
     const session = await pairDeviceProcess(pairingToken, userId);
 
     res.status(200).json({
-      success: true,
+      status: 'success',
       data: session,
     });
   } catch (error) {
