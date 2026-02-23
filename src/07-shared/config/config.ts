@@ -47,6 +47,8 @@ export const config = {
     path: path.resolve(
       process.env.DATA_ENGINE_PATH || '../mind-signal-data-engine'
     ),
+    // 데이터 엔진 베이스 url
+    baseUrl: process.env.DATA_ENGINE_URL || 'http://localhost:5002',
   },
 } as const; // 읽기 전용으로 설정
 

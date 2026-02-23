@@ -1,0 +1,32 @@
+import { Router } from 'express';
+import analyzerController from './analyzer.controller';
+import { authenticate } from '@07-shared/middlewares';
+
+const router = Router();
+/**
+ * @openapi
+ * /api/analyzer:
+ *   get:
+ *     summary: 내 분석 데이터 조회
+ *     description: 인증된 사용자의 정보를 기반으로 데이터 엔진으로부터 분석된 데이터를 조회하여 반환합니다.
+ *     tags: [Analyzer]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 분석 데이터 조회 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: "success" }
+ *                 data: { type: string, example: "설명설명" }
+ *       401:
+ *         description: 인증 실패 (토큰 문제)
+ *       404:
+ *         description: 데이터를 찾을 수 없음
+ */
+router.get('/', authenticate, analyzerController.getAnalyzerData);
+
+export default router;
