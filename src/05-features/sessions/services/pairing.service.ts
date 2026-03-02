@@ -1,6 +1,38 @@
 import { Session } from '@06-entities/sessions';
 import { Types } from 'mongoose';
 import { AppError } from '@07-shared/errors';
+import crypto from 'crypto';
+
+/**
+ * [Service] 운영자용 그룹 세션 생성 프로세스 정의함
+ * 그룹 내 기존 세션 수를 조회하여 순차적 subjectIndex 부여함
+ * @param groupId 기존 그룹에 추가할 경우 제공하며, 없을 경우 신규 생성함
+ */
+export const createGroupSessionProcess = async (groupId?: string) => {
+  // 1. 그룹 식별자 결정함 (제공되지 않으면 신규 생성 수행함)
+  const effectiveGroupId =
+    groupId || crypto.randomBytes(4).toString('hex').toUpperCase();
+
+  // 2. 해당 그룹의 현재 세션 수 확인하여 다음 인덱스 계산 수행함
+  const existingCount = await Session.countDocuments({
+    groupId: effectiveGroupId,
+  });
+  const nextSubjectIndex = existingCount + 1;
+
+  // 3. 6자리 무작위 페어링 토큰 생성 수행함
+  const pairingToken = crypto.randomBytes(3).toString('hex').toUpperCase();
+
+  // 4. 확장된 스키마 기반으로 세션 엔티티 생성 및 저장함
+  const newSession = new Session({
+    groupId: effectiveGroupId,
+    subjectIndex: nextSubjectIndex,
+    pairingToken,
+    status: 'CREATED',
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5분 유효함
+  });
+
+  return await newSession.save();
+};
 
 /**
  * Phase 1.5: 모바일 기기 페어링 프로세스
@@ -12,24 +44,27 @@ export const pairDeviceProcess = async (
   pairingToken: string,
   userId: string
 ) => {
-  // 0. userId 유효성 검사 (추가 권장)
+  // 0. userId 유효성 검사 수행함
   if (!Types.ObjectId.isValid(userId)) {
-    throw new Error('INVALID_USER_ID_FORMAT');
+    throw new AppError('유효하지 않은 사용자 ID 형식입니다', 400);
   }
 
-  // 1. 세션 조회
+  // 1. 토큰 유효성 및 만료 확인 수행함
+  // DB에서 페어링 토큰에 해당하는 세션 데이터 조회함
   const session = await Session.findOne({ pairingToken });
   if (!session) {
-    throw new Error('INVALID_TOKEN');
+    throw new AppError('존재하지 않거나 유효하지 않은 토큰입니다', 404);
   }
 
-  // 2. 만료 및 상태 전이 가능 여부 체크 (Note A-1, A-2)
+  // 2. 만료 및 상태 전이 가능 여부 체크 수행함 (Note A-1, A-2)
+  // 토큰 만료 시 상태를 EXPIRED로 변경하고 에러 발생시킴
   if (session.isExpired()) {
     session.status = 'EXPIRED';
     await session.save();
     throw new AppError('페어링 토큰이 만료되었습니다. 다시 시도해주세요.', 401);
   }
 
+  // 스키마에 정의된 전이 규칙에 따라 PAIRED 상태 전환 가능 여부 확인함
   if (!session.canTransitionTo('PAIRED')) {
     throw new AppError(
       `현재 세션 상태(${session.status})에서는 페어링할 수 없습니다.`,
@@ -37,7 +72,8 @@ export const pairDeviceProcess = async (
     );
   }
 
-  // 3. 페어링 정보 업데이트 (Note A-3)
+  // 3. 페어링 정보 업데이트 완료함 (Note A-3)
+  // 세션 상태를 PAIRED로 변경하고 사용자 ID 및 완료 시점 기록함
   session.status = 'PAIRED';
   session.userId = new Types.ObjectId(userId);
   session.pairedAt = new Date();

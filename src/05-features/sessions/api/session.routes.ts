@@ -285,4 +285,11 @@ router.post(
   sessionsController.submitConsent
 );
 
+// 특정 그룹의 실시간 합류 현황 조회 수행함 (운영자 대시보드 폴링용)
+router.get(
+  '/group/:groupId/status',
+  authenticate,
+  sessionsController.checkGroupStatus
+);
+
 export default router;

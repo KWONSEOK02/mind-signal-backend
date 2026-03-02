@@ -1,0 +1,75 @@
+{
+  "version": "1.0.0",
+  "darkMode": true,
+  "gridEnabling": false,
+  "detailLevel": "All",
+  "tablePositions": [
+    {
+      "name": "User",
+      "schemaName": "public",
+      "x": 0,
+      "y": 50
+    },
+    {
+      "name": "Session",
+      "schemaName": "public",
+      "x": 275.2890625,
+      "y": 50
+    },
+    {
+      "name": "EegRecord",
+      "schemaName": "public",
+      "x": 521.94580078125,
+      "y": 50
+    }
+  ],
+  "tableGroupCollapseStates": [],
+  "stickyNoteLayouts": [],
+  "referencePaths": [
+    {
+      "firstFieldNames": [
+        "userId"
+      ],
+      "firstTableName": "User",
+      "firstSchemaName": "public",
+      "firstRelation": "1",
+      "secondFieldNames": [
+        "userId"
+      ],
+      "secondTableName": "Session",
+      "secondSchemaName": "public",
+      "secondRelation": "*",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "userId"
+      ],
+      "firstTableName": "User",
+      "firstSchemaName": "public",
+      "firstRelation": "1",
+      "secondFieldNames": [
+        "userId"
+      ],
+      "secondTableName": "EegRecord",
+      "secondSchemaName": "public",
+      "secondRelation": "*",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "sessionId"
+      ],
+      "firstTableName": "Session",
+      "firstSchemaName": "public",
+      "firstRelation": "1",
+      "secondFieldNames": [
+        "sessionId"
+      ],
+      "secondTableName": "EegRecord",
+      "secondSchemaName": "public",
+      "secondRelation": "*",
+      "checkPoints": []
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+// 사용자 정보를 저장하는 기본 테이블임
+Table User {
+  userId ObjectId [pk] // 고유 식별자임
+  email String [not null, unique] // 이메일 주소임
+  name String // 사용자 이름임
+  password String // 비밀번호 정보임
+  brainType String // 뇌파 유형임
+  loginType String // 서비스 로그인 방식임
+  membershipLevel String // 멤버십 등급임
+}
+
+// 기기 페어링 및 측정 세션을 관리함
+Table Session {
+  sessionId ObjectId [pk] // 세션 고유 번호임
+  pairingToken String [unique] // 연결용 토큰임
+  userId ObjectId [ref: > User.userId] // 사용자 테이블 참조함
+  status String // 현재 상태(CREATED, PAIRED 등)임
+  pairedAt Date // 페어링 완료 시간임
+  expiresAt Date // 세션 만료 시간임
+  createdAt Date // 데이터 생성 시간임
+}
+
+// 측정된 EEG 데이터를 기록하는 테이블임
+Table EegRecord {
+  recordId ObjectId [pk] // 기록 고유 번호임
+  userId ObjectId [ref: > User.userId] // 사용자 테이블 참조함
+  sessionId ObjectId [ref: > Session.sessionId] // 세션 테이블 참조함
+  rawDataPath String // 데이터 저장 경로임
+  eegSummary Object // 분석 요약 객체임
+  measuredAt Date // 실제 측정 시간임
+}
