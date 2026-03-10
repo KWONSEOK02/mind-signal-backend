@@ -28,7 +28,8 @@ export const startMeasurementService = async (sessionId: string) => {
   // 4. Redis 브릿징 로직
   const subscriber = redisService.client.duplicate();
   await subscriber.connect();
-  await subscriber.subscribe('mind-signal-live', (message: string) => {
+  const channel = `mind-signal:${session.groupId}:subject:${session.subjectIndex}`;
+  await subscriber.subscribe(channel, (message: string) => {
     try {
       const data = JSON.parse(message);
       SocketService.emitLiveEvent('eeg-live', { sessionId: session._id, data });
@@ -39,15 +40,16 @@ export const startMeasurementService = async (sessionId: string) => {
 
   // 5. 외부 엔진 실행
   const enginePath = config.dataEngine.path;
-  const pythonProcess = spawn('python', ['-m', 'core.streamer'], {
-    cwd: enginePath,
-    env: { ...process.env, SESSION_ID: sessionId.toString() },
-  });
+  const pythonProcess = spawn(
+    'python',
+    ['-m', 'core.main', session.groupId, String(session.subjectIndex)],
+    { cwd: enginePath }
+  );
 
   pythonProcess.on('close', async (_code) => {
     session.status = 'COMPLETED';
     await session.save();
-    await subscriber.unsubscribe('mind-signal-live');
+    await subscriber.unsubscribe(channel);
     await subscriber.quit();
   });
 

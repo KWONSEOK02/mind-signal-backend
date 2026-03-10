@@ -1,3 +1,4 @@
+import http from 'http';
 import express, { ErrorRequestHandler } from 'express';
 import mongoose from 'mongoose';
 import bodyParser from 'body-parser';
@@ -6,6 +7,7 @@ import swaggerUi from 'swagger-ui-express';
 import { specs } from '@07-shared/config/swagger';
 import indexRouter from '@01-app/app.router';
 import { config } from '@07-shared/config/config';
+import { SocketService } from '@07-shared/lib/socket';
 
 const app = express();
 app.use(cors());
@@ -62,8 +64,10 @@ async function connectDB() {
     });
 
     const PORT = Number(config.port) || 5000;
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`\n API running at http://localhost:${PORT}`);
+    const server = http.createServer(app);
+    SocketService.init(server);
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`API running at http://localhost:${PORT}`);
     });
   } catch (err) {
     console.error('서버 시작 중 오류:', err);
