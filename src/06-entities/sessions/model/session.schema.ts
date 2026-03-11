@@ -126,6 +126,12 @@ sessionSchema.methods.canTransitionTo = function (
   return transitions[current].includes(nextStatus);
 };
 
+/** * 6.5 복합 유니크 인덱스 선언 (groupId + subjectIndex 충돌 방지함) */
+sessionSchema.index(
+  { groupId: 1, subjectIndex: 1 },
+  { unique: true, sparse: true, name: 'groupId_subjectIndex_unique' }
+);
+
 /** 7. 모델 생성 및 수출 */
 export const Session = model<Session, SessionModel>('Session', sessionSchema);
 export default Session;

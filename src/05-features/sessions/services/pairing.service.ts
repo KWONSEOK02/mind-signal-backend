@@ -1,11 +1,12 @@
 import { Session } from '@06-entities/sessions';
 import { Types } from 'mongoose';
+import mongoose from 'mongoose';
 import { AppError } from '@07-shared/errors';
 import crypto from 'crypto';
 
 /**
  * [Service] 운영자용 그룹 세션 생성 프로세스 정의함
- * 그룹 내 기존 세션 수를 조회하여 순차적 subjectIndex 부여함
+ * $inc 원자적 연산으로 동시 요청 시에도 고유한 subjectIndex 보장함
  * @param groupId 기존 그룹에 추가할 경우 제공하며, 없을 경우 신규 생성함
  */
 export const createGroupSessionProcess = async (groupId?: string) => {
@@ -13,16 +14,25 @@ export const createGroupSessionProcess = async (groupId?: string) => {
   const effectiveGroupId =
     groupId || crypto.randomBytes(4).toString('hex').toUpperCase();
 
-  // 2. 해당 그룹의 현재 세션 수 확인하여 다음 인덱스 계산 수행함
-  const existingCount = await Session.countDocuments({
-    groupId: effectiveGroupId,
-  });
-  const nextSubjectIndex = existingCount + 1;
+  // 2. 원자적 $inc 연산으로 고유 subjectIndex 획득함 (경쟁 조건 방지함)
+  const counter = await mongoose.connection.db!
+    .collection<{ groupId: string; seq: number }>('group_counters')
+    .findOneAndUpdate(
+      { groupId: effectiveGroupId },
+      { $inc: { seq: 1 } },
+      { upsert: true, returnDocument: 'after' }
+    );
+  const nextSubjectIndex = counter?.seq ?? null;
 
-  // 3. 6자리 무작위 페어링 토큰 생성 수행함
+  // 3. 할당된 subjectIndex 유효성 검사 수행함
+  if (!nextSubjectIndex || nextSubjectIndex <= 0) {
+    throw new AppError('subjectIndex 할당에 실패했습니다.', 500);
+  }
+
+  // 4. 6자리 무작위 페어링 토큰 생성 수행함
   const pairingToken = crypto.randomBytes(3).toString('hex').toUpperCase();
 
-  // 4. 확장된 스키마 기반으로 세션 엔티티 생성 및 저장함
+  // 5. 확장된 스키마 기반으로 세션 엔티티 생성 및 저장함
   const newSession = new Session({
     groupId: effectiveGroupId,
     subjectIndex: nextSubjectIndex,
@@ -56,7 +66,7 @@ export const pairDeviceProcess = async (
     throw new AppError('존재하지 않거나 유효하지 않은 토큰입니다', 404);
   }
 
-  // 2. 만료 및 상태 전이 가능 여부 체크 수행함 (Note A-1, A-2)
+  // 2. 만료 및 상태 전이 가능 여부 체크 수행함
   // 토큰 만료 시 상태를 EXPIRED로 변경하고 에러 발생시킴
   if (session.isExpired()) {
     session.status = 'EXPIRED';
@@ -72,7 +82,7 @@ export const pairDeviceProcess = async (
     );
   }
 
-  // 3. 페어링 정보 업데이트 완료함 (Note A-3)
+  // 3. 페어링 정보 업데이트 완료함
   // 세션 상태를 PAIRED로 변경하고 사용자 ID 및 완료 시점 기록함
   session.status = 'PAIRED';
   session.userId = new Types.ObjectId(userId);
