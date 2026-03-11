@@ -44,7 +44,11 @@ export const startMeasurementService = async (sessionId: string) => {
   const channel = `mind-signal:${session.groupId}:subject:${session.subjectIndex}`;
   await subscriber.subscribe(channel, (message: string) => {
     try {
-      const data = JSON.parse(message);
+      const parsed = JSON.parse(message);
+      // Python 엔진 페이로드에서 metrics 필드만 추출하여 전달함
+      // 전체 구조: { type, groupId, subjectIndex, waves, metrics, time }
+      // 프론트엔드 EmotivMetrics 규격: { engagement, interest, excitement, stress, relaxation, focus }
+      const data = parsed.metrics ?? parsed;
       SocketService.emitLiveEvent('eeg-live', { sessionId: session._id, data });
     } catch (err) {
       console.error('Redis JSON 파싱 에러:', err);

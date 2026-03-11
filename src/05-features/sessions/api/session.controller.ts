@@ -28,10 +28,10 @@ export const createSession = async (
     res.status(201).json({
       status: 'success',
       data: {
+        id: newSession._id,
         groupId: newSession.groupId,
         subjectIndex: newSession.subjectIndex,
         pairingToken: newSession.pairingToken,
-        sessionId: newSession._id,
         expiresAt: newSession.expiresAt,
       },
     });
