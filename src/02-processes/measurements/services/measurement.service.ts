@@ -65,7 +65,20 @@ export const startMeasurementService = async (sessionId: string) => {
 
   // 7. Python 프로세스 에러 핸들러 추가함 (실행 파일 없음 등 처리함)
   pythonProcess.on('error', async (err) => {
-    console.error('Python 프로세스 실행 에러:', err);
+    console.error('Python 프로세스 실행 실패:', err);
+    // 세션 상태 업데이트함
+    session.status = 'CANCELLED';
+    try {
+      await session.save();
+      // 측정 완료 이벤트 발행함
+      SocketService.emitLiveEvent('measurement-complete', {
+        sessionId: session._id,
+        status: session.status,
+      });
+    } catch (saveErr) {
+      console.error('세션 상태 저장 실패:', saveErr);
+    }
+    // Redis 구독 정리함
     try {
       await subscriber.unsubscribe(channel);
       await subscriber.quit();
@@ -81,6 +94,11 @@ export const startMeasurementService = async (sessionId: string) => {
     session.status = code === 0 ? 'COMPLETED' : 'CANCELLED';
     try {
       await session.save();
+      // 측정 완료 이벤트 발행함
+      SocketService.emitLiveEvent('measurement-complete', {
+        sessionId: session._id,
+        status: session.status,
+      });
     } finally {
       // session.save() 실패 여부와 무관하게 Redis 구독 반드시 정리함
       try {
