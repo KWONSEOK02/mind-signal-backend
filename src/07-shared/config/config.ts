@@ -49,6 +49,8 @@ export const config = {
     ),
     // 데이터 엔진 베이스 url
     baseUrl: process.env.DATA_ENGINE_URL || 'http://localhost:5002',
+    // conda 환경 Python 실행 파일 경로 (기본값: 시스템 python)
+    pythonBin: process.env.DATA_ENGINE_PYTHON ?? 'python',
   },
 } as const; // 읽기 전용으로 설정
 
