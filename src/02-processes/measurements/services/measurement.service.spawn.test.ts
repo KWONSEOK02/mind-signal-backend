@@ -20,9 +20,7 @@ const engineRoot = path.resolve(
   '..',
   'mind-signal-data-engine'
 );
-const hasStreamer = fs.existsSync(
-  path.join(engineRoot, 'core', 'streamer.py')
-);
+const hasStreamer = fs.existsSync(path.join(engineRoot, 'core', 'streamer.py'));
 const hasMain = fs.existsSync(path.join(engineRoot, 'core', 'main.py'));
 
 describe('measurement.service.ts: 올바른 Python 진입점 spawn 검증', () => {
@@ -79,12 +77,9 @@ describe('measurement.service.ts: 올바른 Python 진입점 spawn 검증', () =
     }
   );
 
-  itIfMain(
-    'core/main.py에 __main__ 블록이 있음 — 올바른 진입점임',
-    () => {
-      expect(mainSource).toContain('__main__');
-    }
-  );
+  itIfMain('core/main.py에 __main__ 블록이 있음 — 올바른 진입점임', () => {
+    expect(mainSource).toContain('__main__');
+  });
 
   itIfMain('core/main.py가 sys.argv[1]로 groupId를 받음', () => {
     expect(mainSource).toContain('sys.argv[1]');
