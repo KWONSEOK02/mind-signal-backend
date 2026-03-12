@@ -10,6 +10,21 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+// data-engine 경로를 동기적으로 확인함 (CI 환경 대응)
+const engineRoot = path.resolve(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'mind-signal-data-engine'
+);
+const hasStreamer = fs.existsSync(
+  path.join(engineRoot, 'core', 'streamer.py')
+);
+const hasMain = fs.existsSync(path.join(engineRoot, 'core', 'main.py'));
+
 describe('measurement.service.ts: 올바른 Python 진입점 spawn 검증', () => {
   let serviceSource: string;
   let streamerSource: string;
@@ -19,24 +34,18 @@ describe('measurement.service.ts: 올바른 Python 진입점 spawn 검증', () =
     const servicePath = path.resolve(__dirname, 'measurement.service.ts');
     serviceSource = fs.readFileSync(servicePath, 'utf-8');
 
-    // __dirname 기준으로 data-engine 경로 해석함
-    const engineRoot = path.resolve(
-      __dirname,
-      '..',
-      '..',
-      '..',
-      '..',
-      '..',
-      'mind-signal-data-engine'
-    );
-    streamerSource = fs.readFileSync(
-      path.join(engineRoot, 'core', 'streamer.py'),
-      'utf-8'
-    );
-    mainSource = fs.readFileSync(
-      path.join(engineRoot, 'core', 'main.py'),
-      'utf-8'
-    );
+    if (hasStreamer) {
+      streamerSource = fs.readFileSync(
+        path.join(engineRoot, 'core', 'streamer.py'),
+        'utf-8'
+      );
+    }
+    if (hasMain) {
+      mainSource = fs.readFileSync(
+        path.join(engineRoot, 'core', 'main.py'),
+        'utf-8'
+      );
+    }
   });
 
   it('서비스가 core.main을 올바른 진입점으로 사용함', () => {
@@ -59,19 +68,29 @@ describe('measurement.service.ts: 올바른 Python 진입점 spawn 검증', () =
     expect(serviceSource).not.toContain('SESSION_ID');
   });
 
-  it('core/streamer.py에 __main__ 블록이 없음 — 모듈로 실행 시 즉시 종료됨', () => {
-    expect(streamerSource).not.toContain('__main__');
-  });
+  // data-engine 디렉토리가 없는 CI 환경에서는 Python 소스 검증 skip함
+  const itIfStreamer = hasStreamer ? it : it.skip;
+  const itIfMain = hasMain ? it : it.skip;
 
-  it('core/main.py에 __main__ 블록이 있음 — 올바른 진입점임', () => {
-    expect(mainSource).toContain('__main__');
-  });
+  itIfStreamer(
+    'core/streamer.py에 __main__ 블록이 없음 — 모듈로 실행 시 즉시 종료됨',
+    () => {
+      expect(streamerSource).not.toContain('__main__');
+    }
+  );
 
-  it('core/main.py가 sys.argv[1]로 groupId를 받음', () => {
+  itIfMain(
+    'core/main.py에 __main__ 블록이 있음 — 올바른 진입점임',
+    () => {
+      expect(mainSource).toContain('__main__');
+    }
+  );
+
+  itIfMain('core/main.py가 sys.argv[1]로 groupId를 받음', () => {
     expect(mainSource).toContain('sys.argv[1]');
   });
 
-  it('core/main.py가 sys.argv[2]로 subjectIndex를 받음', () => {
+  itIfMain('core/main.py가 sys.argv[2]로 subjectIndex를 받음', () => {
     expect(mainSource).toContain('sys.argv[2]');
   });
 });
