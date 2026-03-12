@@ -22,31 +22,26 @@ jobs:
         with:
           node-version: '20' # package.json engines: >=20.0.0 에 맞춰 노드 환경 설정함
           cache: 'npm'
-          cache-dependency-path: mind-signal-backend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm install
-        working-directory: mind-signal-backend
         # 프로젝트 의존성 패키지 설치함
 
       - name: Run Lint
         run: npm run lint
-        working-directory: mind-signal-backend
         # ESLint를 통한 정적 코드 분석 수행함
 
       - name: Check Format
         run: npx prettier --check "src/**/*.ts"
-        working-directory: mind-signal-backend
         # Prettier 포맷 규칙 준수 여부 검사함 (npm run format은 --write라 CI에서 직접 사용 불가)
 
       - name: Run Tests
         run: npm run test
-        working-directory: mind-signal-backend
         env:
           NODE_ENV: test
         # Jest를 사용한 유닛 테스트 실행함 (MongoDB·Redis 미연결 — 소스 파일 기반 테스트)
 
       - name: Build Project
         run: npm run build
-        working-directory: mind-signal-backend
         # TypeScript 컴파일 및 경로 별칭 변환 성공 여부 검증함 (tsc + tsc-alias)
