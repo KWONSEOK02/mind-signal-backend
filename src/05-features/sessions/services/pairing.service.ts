@@ -15,8 +15,8 @@ export const createGroupSessionProcess = async (groupId?: string) => {
     groupId || crypto.randomBytes(4).toString('hex').toUpperCase();
 
   // 2. 원자적 $inc 연산으로 고유 subjectIndex 획득함 (경쟁 조건 방지함)
-  const counter = await mongoose.connection.db!
-    .collection<{ groupId: string; seq: number }>('group_counters')
+  const counter = await mongoose.connection
+    .db!.collection<{ groupId: string; seq: number }>('group_counters')
     .findOneAndUpdate(
       { groupId: effectiveGroupId },
       { $inc: { seq: 1 } },

@@ -27,15 +27,15 @@ describe('measurement.service.ts: 올바른 Python 진입점 spawn 검증', () =
       '..',
       '..',
       '..',
-      'mind-signal-data-engine',
+      'mind-signal-data-engine'
     );
     streamerSource = fs.readFileSync(
       path.join(engineRoot, 'core', 'streamer.py'),
-      'utf-8',
+      'utf-8'
     );
     mainSource = fs.readFileSync(
       path.join(engineRoot, 'core', 'main.py'),
-      'utf-8',
+      'utf-8'
     );
   });
 

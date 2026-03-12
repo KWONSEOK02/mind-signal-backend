@@ -33,12 +33,14 @@ describe('measurement.service.ts: Redis 채널이 동적으로 생성됨', () =>
 
   it('엔진 발행 채널 템플릿이 올바른 형식임', () => {
     expect(buildEnginePublishChannel('group-abc', 1)).toBe(
-      'mind-signal:group-abc:subject:1',
+      'mind-signal:group-abc:subject:1'
     );
   });
 
   it('서비스 파일에 동적 채널 패턴이 존재함', () => {
     // 서비스 파일에서 동적 채널 구성 패턴 확인함
-    expect(serviceSource).toMatch(/mind-signal:.*groupId.*subject.*subjectIndex/s);
+    expect(serviceSource).toMatch(
+      /mind-signal:.*groupId.*subject.*subjectIndex/s
+    );
   });
 });
