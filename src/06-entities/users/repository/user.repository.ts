@@ -1,11 +1,11 @@
-import User, { UserDoc } from '../model/user.schema';
+import User, { UserDoc, LoginType } from '../model/user.schema';
 
 export type CreateUserInput = {
   email: string;
   name: string;
   password?: string;
   brainType?: string;
-  loginType?: 'local' | 'google' | 'kakao';
+  loginType?: LoginType[];
   membershipLevel?: string;
   providerId?: string;
 };

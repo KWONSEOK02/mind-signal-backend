@@ -4,13 +4,16 @@ import { config } from '@07-shared/config/config';
 
 const { jwtSecret: jwtCfg } = config;
 
+/** 로그인 방식 타입 */
+export type LoginType = 'local' | 'google' | 'kakao';
+
 /** 1. 문서 필드 타입 */
 export interface User {
   email: string;
   password?: string;
   name: string;
   brainType: string;
-  loginType: 'local' | 'google' | 'kakao';
+  loginType: LoginType[];
   membershipLevel: string;
   providerId?: string | null;
 }
@@ -34,19 +37,19 @@ const userSchema = new Schema<User, UserModel, UserMethods>(
       lowercase: true,
       trim: true,
     },
-    // local 로그인 시에만 필수, 소셜 로그인 시 불필요
+    // local 로그인 포함 시에만 필수, 소셜 전용이면 불필요
     password: {
       type: String,
-      required: function (this: { loginType: string }) {
-        return this.loginType === 'local';
+      required: function (this: { loginType: string[] }) {
+        return this.loginType.includes('local');
       },
     },
     name: { type: String, required: true },
     brainType: { type: String, default: 'PENDING' },
     loginType: {
-      type: String,
+      type: [String],
       enum: ['local', 'google', 'kakao'],
-      default: 'local',
+      default: ['local'],
     },
     membershipLevel: { type: String, default: 'BASIC' },
     // 소셜 로그인 공급자 고유 ID

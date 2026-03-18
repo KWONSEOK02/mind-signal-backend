@@ -52,7 +52,7 @@ async function register(createUserData: any): Promise<AuthResult> {
     name,
     password: hashedPassword,
     membershipLevel: userData.membershipLevel ?? 'BASIC',
-    loginType: userData.loginType ?? 'local',
+    loginType: userData.loginType ?? ['local'],
   } as any);
 
   // 6) 토큰 발급
@@ -69,8 +69,12 @@ async function loginWithEmail({
   // 1) 비밀번호 포함 조회 (Mongoose select("+password") 전제)
   const user = await User.findOne({ email }).select('+password');
 
-  // 2) 사용자 없음 / 비밀번호 불일치
-  if (!user || !(await bcrypt.compare(password, (user as any).password))) {
+  // 2) 사용자 없음 / local 로그인 미지원 / 비밀번호 불일치
+  if (
+    !user ||
+    !user.loginType.includes('local') ||
+    !(await bcrypt.compare(password, (user as any).password))
+  ) {
     throw new AppError('아이디 또는 비밀번호가 일치하지 않습니다.', 401);
   }
 
@@ -97,28 +101,51 @@ async function socialLogin(
   let user = await userRepository.findByEmail(socialUser.email);
 
   if (user) {
-    // 4) 기존 사용자가 다른 로그인 방식으로 가입된 경우 충돌 처리
-    if (user.loginType !== provider) {
-      throw new AppError(
-        `해당 이메일은 이미 ${user.loginType} 방식으로 가입되어 있습니다`,
-        409
-      );
+    // 4) 이미 해당 소셜 공급자가 등록되어 있으면 바로 로그인
+    if (!user.loginType.includes(provider as any)) {
+      // 5) 미등록 공급자 → 계정 연동 시도
+      user = await linkAccountOrReject(user, socialUser, provider);
     }
   } else {
-    // 5) 신규 사용자 생성 (소셜 로그인은 비밀번호 없음)
+    // 6) 신규 사용자 생성 (소셜 로그인은 비밀번호 없음)
     user = await userRepository.create({
       email: socialUser.email,
       name: socialUser.name,
-      loginType: provider as 'google' | 'kakao',
+      loginType: [provider as 'google' | 'kakao'],
       providerId: socialUser.providerId,
       membershipLevel: 'BASIC',
     });
   }
 
-  // 6) JWT 토큰 발급
+  // 7) JWT 토큰 발급
   const token: string = await user.generateToken();
 
   return { user, token };
+}
+
+/**
+ * 이메일+이름 일치 시 기존 계정에 소셜 공급자 추가, 불일치 시 409 반환함
+ * - loginType 배열에 소셜 공급자 추가 (기존 방식 유지)
+ * - providerId 저장
+ */
+async function linkAccountOrReject(
+  existingUser: UserDoc,
+  socialUser: { email: string; name: string; providerId: string },
+  provider: string
+): Promise<UserDoc> {
+  if (existingUser.name !== socialUser.name) {
+    throw new AppError(
+      `해당 이메일은 이미 ${existingUser.loginType.join(', ')} 방식으로 가입되어 있습니다`,
+      409
+    );
+  }
+
+  // loginType 배열에 소셜 공급자 추가 (기존 local 등 유지)
+  existingUser.loginType.push(provider as 'google' | 'kakao');
+  existingUser.providerId = socialUser.providerId;
+  await existingUser.save();
+
+  return existingUser;
 }
 
 // Access Token으로 소셜 로그인 처리함 (모바일 SDK 플로우용)
@@ -136,25 +163,23 @@ async function socialLoginWithToken(
   let user = await userRepository.findByEmail(socialUser.email);
 
   if (user) {
-    // 4) 기존 사용자가 다른 로그인 방식으로 가입된 경우 충돌 처리
-    if (user.loginType !== provider) {
-      throw new AppError(
-        `해당 이메일은 이미 ${user.loginType} 방식으로 가입되어 있습니다`,
-        409
-      );
+    // 4) 이미 해당 소셜 공급자가 등록되어 있으면 바로 로그인
+    if (!user.loginType.includes(provider as any)) {
+      // 5) 미등록 공급자 → 계정 연동 시도
+      user = await linkAccountOrReject(user, socialUser, provider);
     }
   } else {
-    // 5) 신규 사용자 생성 (소셜 로그인은 비밀번호 없음)
+    // 6) 신규 사용자 생성 (소셜 로그인은 비밀번호 없음)
     user = await userRepository.create({
       email: socialUser.email,
       name: socialUser.name,
-      loginType: provider as 'google' | 'kakao',
+      loginType: [provider as 'google' | 'kakao'],
       providerId: socialUser.providerId,
       membershipLevel: 'BASIC',
     });
   }
 
-  // 6) JWT 토큰 발급
+  // 7) JWT 토큰 발급
   const token: string = await user.generateToken();
 
   return { user, token };
