@@ -3,10 +3,11 @@ import User, { UserDoc } from '../model/user.schema';
 export type CreateUserInput = {
   email: string;
   name: string;
-  password: string;
+  password?: string;
   brainType?: string;
-  loginType?: 'local' | 'google';
+  loginType?: 'local' | 'google' | 'kakao';
   membershipLevel?: string;
+  providerId?: string;
 };
 
 /** * 이메일로 사용자 조회

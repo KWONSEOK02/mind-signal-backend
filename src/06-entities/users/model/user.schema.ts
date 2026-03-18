@@ -7,11 +7,12 @@ const { jwtSecret: jwtCfg } = config;
 /** 1. 문서 필드 타입 */
 export interface User {
   email: string;
-  password: string;
+  password?: string;
   name: string;
   brainType: string;
-  loginType: 'local' | 'google';
+  loginType: 'local' | 'google' | 'kakao';
   membershipLevel: string;
+  providerId?: string | null;
 }
 
 /** 2. 인스턴스 메서드 타입 */
@@ -33,15 +34,23 @@ const userSchema = new Schema<User, UserModel, UserMethods>(
       lowercase: true,
       trim: true,
     },
-    password: { type: String, required: true }, // 서비스에서 해싱 후 저장
+    // local 로그인 시에만 필수, 소셜 로그인 시 불필요
+    password: {
+      type: String,
+      required: function (this: { loginType: string }) {
+        return this.loginType === 'local';
+      },
+    },
     name: { type: String, required: true },
     brainType: { type: String, default: 'PENDING' },
     loginType: {
       type: String,
-      enum: ['local', 'google'],
+      enum: ['local', 'google', 'kakao'],
       default: 'local',
     },
     membershipLevel: { type: String, default: 'BASIC' },
+    // 소셜 로그인 공급자 고유 ID
+    providerId: { type: String, default: null },
   },
   {
     timestamps: true, //
