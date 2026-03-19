@@ -17,7 +17,7 @@
     "seed": "ts-node -r tsconfig-paths/register ./src/07-shared/lib/seeds/seed.ts",
     "infra:up": "docker-compose up -d",
     "infra:down": "docker-compose down",
-    "test:redis": "docker exec -it mind-signal-redis redis-cli subscribe mind-signal-live",
+    "test:redis": "docker exec -it mind-signal-redis redis-cli psubscribe mind-signal:*",
     "data:run": "cd ../mind-signal-data-engine && python -m core.streamer"
   },
   "description": "Mind Signal Project Backend",
@@ -36,6 +36,7 @@
     "supertest": "^7.1.4",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
+    "ts-jest": "^29.4.6",
     "tsconfig-paths": "^4.2.0",
     "zod": "^4.3.4"
   },

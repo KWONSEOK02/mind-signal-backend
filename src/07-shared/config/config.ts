@@ -47,7 +47,18 @@ export const config = {
     path: path.resolve(
       process.env.DATA_ENGINE_PATH || '../mind-signal-data-engine'
     ),
+    // 데이터 엔진 베이스 url
+    baseUrl: process.env.DATA_ENGINE_URL || 'http://localhost:5002',
+    // conda 환경 Python 실행 파일 경로 (기본값: 시스템 python)
+    pythonBin: process.env.DATA_ENGINE_PYTHON ?? 'python',
   },
+  // 소셜 로그인 OAuth 설정 (선택적 환경변수)
+  googleClientId: process.env.GOOGLE_CLIENT_ID,
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  googleRedirectUri: process.env.GOOGLE_REDIRECT_URI,
+  kakaoClientId: process.env.KAKAO_CLIENT_ID,
+  kakaoClientSecret: process.env.KAKAO_CLIENT_SECRET,
+  kakaoRedirectUri: process.env.KAKAO_REDIRECT_URI,
 } as const; // 읽기 전용으로 설정
 
 console.log(`현재 구동 환경: ${config.env}`);

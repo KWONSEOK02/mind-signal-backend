@@ -1,34 +1,37 @@
 import { Request, Response, NextFunction } from 'express';
-import { pairDeviceProcess } from '@05-features/sessions/services/pairing.service';
+import {
+  createGroupSessionProcess,
+  pairDeviceProcess,
+} from '@05-features/sessions/services/pairing.service';
 import { submitConsentProcess } from '@05-features/sessions/services/submit-consent.service';
 import { AppError } from '@07-shared/errors';
-import { pairDeviceSchema } from '@05-features/sessions/dto/session.dto'; //DTO 임포트
-import { submitConsentSchema } from '@05-features/sessions/dto/session.dto';
+import {
+  pairDeviceSchema,
+  submitConsentSchema,
+} from '@05-features/sessions/dto/session.dto';
 import { Session } from '@06-entities/sessions';
-import crypto from 'crypto';
 
+/**
+ * [Controller] 새로운 그룹 세션 또는 그룹 내 추가 세션 생성 수행함
+ */
 export const createSession = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    // 6자리 혹은 특정 길이의 무작위 토큰 생성
-    const pairingToken = crypto.randomBytes(3).toString('hex').toUpperCase();
+    const { groupId } = req.body; // 기존 그룹에 추가할 경우 groupId를 본문에서 받음
 
-    const newSession = new Session({
-      pairingToken,
-      status: 'CREATED',
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5분 유효
-    });
-
-    await newSession.save();
+    // 비즈니스 프로세스 호출하여 세션 생성 수행함
+    const newSession = await createGroupSessionProcess(groupId);
 
     res.status(201).json({
       status: 'success',
       data: {
+        id: newSession._id,
+        groupId: newSession.groupId,
+        subjectIndex: newSession.subjectIndex,
         pairingToken: newSession.pairingToken,
-        sessionId: newSession._id,
         expiresAt: newSession.expiresAt,
       },
     });
@@ -37,26 +40,56 @@ export const createSession = async (
   }
 };
 
+/**
+ * [Controller] 특정 그룹의 모든 세션 참가 상태 조회 수행함
+ */
+export const checkGroupStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { groupId } = req.params;
+
+    // 해당 그룹 ID를 가진 모든 세션 조회 수행함
+    const sessions = await Session.find({ groupId });
+
+    // 프론트엔드 위젯 표시를 위한 데이터 가공 수행함
+    const status = sessions.map((s) => ({
+      subjectIndex: s.subjectIndex,
+      status: s.status,
+      guestJoined: s.status === 'PAIRED' || s.status === 'MEASURING',
+    }));
+
+    res.status(200).json({
+      status: 'success',
+      data: { groupId, sessions: status },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * [Controller] 모바일 기기 페어링 요청 처리함
+ */
 export const pairDevice = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    console.log('Current User Check:', req.user);
-    //DTO를 사용한 입력값 검증 (Zod 활용)
-    // req.params가 스키마에 정의된 형식을 따르는지 확인한다.
     const validatedRequest = pairDeviceSchema.parse({ params: req.params });
     const { pairingToken } = validatedRequest.params;
 
-    // 3. 유저 존재 여부 체크 (Type Guard)
+    // 유저 존재 여부 체크 (Type Guard)
     if (!req.user || !req.user.id) {
       throw new AppError('인증이 필요한 서비스입니다.', 401);
     }
 
     const userId = req.user.id;
 
-    // 4. 비즈니스 프로세스 호출
+    // 서비스 로직 호출하여 페어링 상태 업데이트 수행함
     const session = await pairDeviceProcess(pairingToken, userId);
 
     res.status(200).json({
@@ -64,11 +97,13 @@ export const pairDevice = async (
       data: session,
     });
   } catch (error) {
-    // Zod 검증 에러 등은 전역 에러 핸들러에서 400 에러로 처리하도록 넘긴다.
     next(error);
   }
 };
 
+/**
+ * [Controller] 피실험자 동의서 제출 처리함
+ */
 export const submitConsent = async (
   req: Request,
   res: Response,
@@ -91,7 +126,7 @@ export const submitConsent = async (
       isResearchAgreed,
     });
 
-    res.status(201).json({ success: true, data: consent });
+    res.status(201).json({ status: 'success', data: consent });
   } catch (error) {
     next(error);
   }

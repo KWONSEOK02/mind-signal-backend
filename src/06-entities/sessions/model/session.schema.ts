@@ -4,8 +4,10 @@ import { Schema, model, Model, HydratedDocument, Types } from 'mongoose';
  * ERD의 필드와 Note A 규칙을 반영함
  */
 export interface Session {
-  pairingToken: string; // 고유 페어링 토큰
-  userId: Types.ObjectId | null; // 초기에는 null이며 페어링 성공 시 업데이트
+  groupId: string; // 추가: 동일 실험 세션을 묶어주는 그룹 고유 식별자임
+  subjectIndex: number | null; // 추가: 해당 그룹 내 피실험자 할당 번호(1 또는 2)임
+  pairingToken: string; // 고유 페어링 토큰임
+  userId: Types.ObjectId | null; // 페어링 성공 시 바인딩되는 사용자 ID임
   status:
     | 'CREATED'
     | 'PAIRED'
@@ -21,7 +23,6 @@ export interface Session {
 /** 2. 인스턴스 메서드 타입 정의 */
 export interface SessionMethods {
   isExpired(): boolean;
-  // 추가: 상태 전이 가능 여부 확인 (Note A 규칙 반영)
   canTransitionTo(nextStatus: Session['status']): boolean;
 }
 
@@ -33,6 +34,15 @@ export type SessionModel = Model<Session, {}, SessionMethods>;
  */
 const sessionSchema = new Schema<Session, SessionModel, SessionMethods>(
   {
+    groupId: {
+      type: String,
+      required: true,
+      index: true, // 그룹 단위 상태 조회를 위한 인덱스 생성함
+    },
+    subjectIndex: {
+      type: Number,
+      default: null, // 페어링 프로세스 중 서비스 로직에서 할당함
+    },
     pairingToken: {
       type: String,
       required: true,
@@ -115,6 +125,12 @@ sessionSchema.methods.canTransitionTo = function (
 
   return transitions[current].includes(nextStatus);
 };
+
+/** * 6.5 복합 유니크 인덱스 선언 (groupId + subjectIndex 충돌 방지함) */
+sessionSchema.index(
+  { groupId: 1, subjectIndex: 1 },
+  { unique: true, sparse: true, name: 'groupId_subjectIndex_unique' }
+);
 
 /** 7. 모델 생성 및 수출 */
 export const Session = model<Session, SessionModel>('Session', sessionSchema);

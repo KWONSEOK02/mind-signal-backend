@@ -10,7 +10,7 @@ export const createFakeSignUpData = (overrides = {}) => {
     password: password,
     passwordConfirm: password,
     name: faker.person.fullName(),
-    loginType: 'local',
+    loginType: ['local'],
     ...overrides, // 특정 값만 고정하고 싶을 때 사용
   };
 };

@@ -6,13 +6,13 @@ import { config } from '@07-shared/config/config';
 import { AppError } from '@07-shared/errors'; // 전역 에러 클래스 사용
 
 export const startMeasurementService = async (sessionId: string) => {
-  // 1. 세션 조회 및 검증 (오류 처리를 서비스에서 전담)
+  // 1. 세션 조회 및 검증함
   const session = await Session.findById(sessionId);
   if (!session) {
     throw new AppError('요청하신 세션을 찾을 수 없습니다.', 404);
   }
 
-  // 2. 상태 전이 비즈니스 규칙 검사
+  // 2. 상태 전이 비즈니스 규칙 검사함
   if (!session.canTransitionTo('MEASURING')) {
     throw new AppError(
       `현재 ${session.status} 상태에서는 측정을 시작할 수 없습니다.`,
@@ -20,35 +20,94 @@ export const startMeasurementService = async (sessionId: string) => {
     );
   }
 
-  // 3. DB 업데이트
+  // 3. subjectIndex null/range 검사 수행함 (Bug 3 guard)
+  if (session.subjectIndex === null || session.subjectIndex <= 0) {
+    throw new AppError('세션에 유효한 subjectIndex가 없습니다.', 400);
+  }
+
+  // 4. DB 업데이트함
   session.status = 'MEASURING';
   session.measuredAt = new Date();
   await session.save();
 
-  // 4. Redis 브릿징 로직
+  // 5. Redis 구독자 연결 (실패 시 상태 롤백 수행함)
   const subscriber = redisService.client.duplicate();
-  await subscriber.connect();
-  await subscriber.subscribe('mind-signal-live', (message: string) => {
+  try {
+    await subscriber.connect();
+  } catch (err) {
+    // Redis 연결 실패 시 세션 상태를 CANCELLED로 롤백함
+    session.status = 'CANCELLED';
+    await session.save();
+    throw err;
+  }
+
+  const channel = `mind-signal:${session.groupId}:subject:${session.subjectIndex}`;
+  await subscriber.subscribe(channel, (message: string) => {
     try {
-      const data = JSON.parse(message);
+      const parsed = JSON.parse(message);
+      // Python 엔진 페이로드에서 metrics 필드만 추출하여 전달함
+      // 전체 구조: { type, groupId, subjectIndex, waves, metrics, time }
+      // 프론트엔드 EmotivMetrics 규격: { engagement, interest, excitement, stress, relaxation, focus }
+      const data = parsed.metrics ?? parsed;
       SocketService.emitLiveEvent('eeg-live', { sessionId: session._id, data });
     } catch (err) {
       console.error('Redis JSON 파싱 에러:', err);
     }
   });
 
-  // 5. 외부 엔진 실행
+  // 6. 외부 Python 엔진 실행함 (conda 환경 Python 바이너리 사용함)
   const enginePath = config.dataEngine.path;
-  const pythonProcess = spawn('python', ['-m', 'core.streamer'], {
-    cwd: enginePath,
-    env: { ...process.env, SESSION_ID: sessionId.toString() },
+  const pythonProcess = spawn(
+    config.dataEngine.pythonBin,
+    ['-m', 'core.main', session.groupId, String(session.subjectIndex)],
+    { cwd: enginePath }
+  );
+
+  // 7. Python 프로세스 에러 핸들러 추가함 (실행 파일 없음 등 처리함)
+  pythonProcess.on('error', async (err) => {
+    console.error('Python 프로세스 실행 실패:', err);
+    // 세션 상태 업데이트함
+    session.status = 'CANCELLED';
+    try {
+      await session.save();
+      // 측정 완료 이벤트 발행함
+      SocketService.emitLiveEvent('measurement-complete', {
+        sessionId: session._id,
+        status: session.status,
+      });
+    } catch (saveErr) {
+      console.error('세션 상태 저장 실패:', saveErr);
+    }
+    // Redis 구독 정리함
+    try {
+      await subscriber.unsubscribe(channel);
+      await subscriber.quit();
+    } catch (cleanupErr) {
+      console.error('Redis 정리 중 에러:', cleanupErr);
+    }
   });
 
-  pythonProcess.on('close', async (_code) => {
-    session.status = 'COMPLETED';
-    await session.save();
-    await subscriber.unsubscribe('mind-signal-live');
-    await subscriber.quit();
+  // 8. Python 종료 시 상태 업데이트 및 Redis 정리함 (try/finally로 누수 방지함)
+  pythonProcess.on('close', async (code) => {
+    console.log(`Python 프로세스 종료 (exit code: ${code})`);
+    // 종료 코드 기반으로 최종 세션 상태 결정함
+    session.status = code === 0 ? 'COMPLETED' : 'CANCELLED';
+    try {
+      await session.save();
+      // 측정 완료 이벤트 발행함
+      SocketService.emitLiveEvent('measurement-complete', {
+        sessionId: session._id,
+        status: session.status,
+      });
+    } finally {
+      // session.save() 실패 여부와 무관하게 Redis 구독 반드시 정리함
+      try {
+        await subscriber.unsubscribe(channel);
+        await subscriber.quit();
+      } catch (cleanupErr) {
+        console.error('Redis 정리 중 에러:', cleanupErr);
+      }
+    }
   });
 
   return { measuredAt: session.measuredAt };
