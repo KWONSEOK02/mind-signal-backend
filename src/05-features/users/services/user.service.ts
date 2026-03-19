@@ -32,7 +32,7 @@ async function createUser(params: CreateUserParams): Promise<UserDoc> {
     ...params,
     password: hash,
     membershipLevel: params.membershipLevel ?? 'customer',
-    loginType: params.loginType ?? 'local',
+    loginType: params.loginType ?? ['local'],
   });
 
   return newUser;

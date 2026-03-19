@@ -52,6 +52,13 @@ export const config = {
     // conda 환경 Python 실행 파일 경로 (기본값: 시스템 python)
     pythonBin: process.env.DATA_ENGINE_PYTHON ?? 'python',
   },
+  // 소셜 로그인 OAuth 설정 (선택적 환경변수)
+  googleClientId: process.env.GOOGLE_CLIENT_ID,
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  googleRedirectUri: process.env.GOOGLE_REDIRECT_URI,
+  kakaoClientId: process.env.KAKAO_CLIENT_ID,
+  kakaoClientSecret: process.env.KAKAO_CLIENT_SECRET,
+  kakaoRedirectUri: process.env.KAKAO_REDIRECT_URI,
 } as const; // 읽기 전용으로 설정
 
 console.log(`현재 구동 환경: ${config.env}`);

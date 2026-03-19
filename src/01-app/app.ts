@@ -8,6 +8,7 @@ import { specs } from '@07-shared/config/swagger';
 import indexRouter from '@01-app/app.router';
 import { config } from '@07-shared/config/config';
 import { SocketService } from '@07-shared/lib/socket';
+import { AuthProviderRegistry } from '@05-features/auth/services/providers/auth-provider.registry';
 
 const app = express();
 app.use(cors());
@@ -58,6 +59,9 @@ async function connectDB() {
     });
 
     console.log('MongoDB 연결 성공');
+
+    // 소셜 인증 공급자 초기화
+    AuthProviderRegistry.initialize();
 
     mongoose.connection.on('error', (err) => {
       console.error('MongoDB 연결 에러:', err);
