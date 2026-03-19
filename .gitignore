@@ -24,4 +24,11 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
+# Claude Code (개인 설정)
+.claude/
+
+# 기밀/임시 파일
+secret.txt
+DIFF-backend.md
+
 # 기타
