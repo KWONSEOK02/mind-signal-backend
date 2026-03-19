@@ -1,7 +1,12 @@
 import { Router } from 'express';
 import authController from './auth.controller';
-import { validate } from '@07-shared/middlewares';
+import { validate, validateParams } from '@07-shared/middlewares';
 import { signUpSchema, loginSchema } from '@05-features/auth/dto/auth.dto';
+import {
+  socialLoginSchema,
+  socialProviderSchema,
+  socialTokenSchema,
+} from '@05-features/auth/dto/social-auth.dto';
 
 const router = Router();
 
@@ -95,5 +100,21 @@ router.post('/login', validate(loginSchema), authController.loginWithEmail);
  */
 
 router.post('/signup', validate(signUpSchema), authController.register);
+
+// 소셜 로그인 라우트 — provider: 'google' | 'kakao'
+router.post(
+  '/social/:provider',
+  validateParams(socialProviderSchema),
+  validate(socialLoginSchema),
+  authController.socialLogin
+);
+
+// 소셜 로그인 Access Token 직접 수신 라우트 — 모바일 SDK 플로우용
+router.post(
+  '/social/:provider/token',
+  validateParams(socialProviderSchema),
+  validate(socialTokenSchema),
+  authController.socialLoginWithToken
+);
 
 export default router;

@@ -13,7 +13,12 @@ export const signUpSchema = z
     name: z
       .string({ error: '이름은 필수입니다.' })
       .min(1, { message: '이름은 필수입니다.' }),
-    loginType: z.enum(['local', 'google']).optional(),
+    loginType: z
+      .preprocess(
+        (val) => (typeof val === 'string' ? [val] : val),
+        z.array(z.enum(['local', 'google', 'kakao']))
+      )
+      .optional(),
   })
   .refine((data) => data.password === data.passwordConfirm, {
     message: '비밀번호와 비밀번호 확인 값이 일치하지 않습니다.',
