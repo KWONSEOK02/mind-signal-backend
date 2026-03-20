@@ -51,6 +51,7 @@ export const config = {
     baseUrl: process.env.DATA_ENGINE_URL || 'http://localhost:5002',
     // conda 환경 Python 실행 파일 경로 (기본값: 시스템 python)
     pythonBin: process.env.DATA_ENGINE_PYTHON ?? 'python',
+    secretKey: process.env.ENGINE_SECRET_KEY || 'change-me-in-production',
   },
   // 소셜 로그인 OAuth 설정 (선택적 환경변수)
   googleClientId: process.env.GOOGLE_CLIENT_ID,
