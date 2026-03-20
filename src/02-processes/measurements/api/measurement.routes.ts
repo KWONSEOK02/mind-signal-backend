@@ -13,6 +13,13 @@ const router = Router();
 
 /**
  * @openapi
+ * tags:
+ *   - name: Measurements
+ *     description: 뇌파 측정 및 실시간 스트리밍 관리
+ */
+
+/**
+ * @openapi
  * /api/measurements/sessions/{sessionId}/eeg/stream:start:
  *   post:
  *     summary: 실시간 뇌파 스트리밍 시작 (Phase 2)
@@ -47,7 +54,7 @@ const router = Router();
  *                   example: "2026-02-12T08:39:11.497Z"
  *
  *       400:
- *         description: 상태 전이 불가 등 잘못된 요청
+ *         description: 상태 전이 불가 또는 subjectIndex 누락
  *         content:
  *           application/json:
  *             schema:
@@ -56,7 +63,7 @@ const router = Router();
  *                 status: { type: string, example: "fail" }
  *                 message:
  *                   type: string
- *                   example: "현재 PAIRED 상태에서는 측정을 시작할 수 없습니다."
+ *                   example: "현재 CREATED 상태에서는 측정을 시작할 수 없습니다."
  *
  *       401:
  *         description: 인증 실패(토큰 누락/만료/비정상)
@@ -79,14 +86,14 @@ const router = Router();
  *                 message: { type: string, example: "요청하신 세션을 찾을 수 없습니다." }
  *
  *       500:
- *         description: 서버 오류(외부 엔진 실행/Redis 구독/예상치 못한 오류 등)
+ *         description: 서버 오류(외부 엔진 실행/Redis 구독 등)
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 status: { type: string, example: "fail" }
- *                 message: { type: string, example: "서버 오류가 발생했습니다." }
+ *                 status: { type: string, example: "error" }
+ *                 message: { type: string, example: "서버 내부에 예상치 못한 오류가 발생했습니다." }
  */
 
 router.post(

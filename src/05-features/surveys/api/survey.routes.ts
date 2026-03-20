@@ -8,7 +8,7 @@ const router = Router();
  * @openapi
  * tags:
  *   - name: Surveys
- * description: 사용자 성향 분석용 설문 관리
+ *     description: 사용자 성향 분석용 설문 관리
  */
 
 /**
@@ -57,7 +57,7 @@ const router = Router();
  *                   example: "fail"
  *                 message:
  *                   type: string
- *                   example: "등록된 설문 문항이 없습니다."
+ *                   example: "등록된 설문 문항을 찾을 수 없습니다."
  */
 
 //설문 문항 조회
@@ -94,9 +94,8 @@ router.get('/questions', surveyController.getQuestions);
  *                     answerValue:
  *                       oneOf:
  *                         - type: string
- *                         - type: string
- *                         - type: string
- *                         - type: string
+ *                         - type: integer
+ *                       description: 설문 유형에 따라 텍스트(string) 또는 척도(integer)
  *                       example: 4
  *     responses:
  *       201:
@@ -140,7 +139,7 @@ router.get('/questions', surveyController.getQuestions);
  *                   example: "fail"
  *                 message:
  *                   type: string
- *                   example: "인증 정보가 유효하지 않습니다."
+ *                   example: "인증이 필요합니다."
  */
 
 //설문조사 응답 제출
@@ -170,11 +169,30 @@ router.post('/responses', authenticate, surveyController.submitResponses);
  *                   items:
  *                     type: object
  *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "65c9f0b2a1b2c3d4e5f67890"
+ *                       userId:
+ *                         type: string
+ *                         example: "695a003df33270433494b87e"
  *                       questionId:
  *                         type: string
  *                         example: "65a...123"
  *                       answerValue:
  *                         example: 4
+ *       401:
+ *         description: 인증 실패 (토큰 없음 혹은 유효하지 않음)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "fail"
+ *                 message:
+ *                   type: string
+ *                   example: "인증이 필요합니다."
  *       404:
  *         description: 제출한 응답 내역이 없음
  *         content:
