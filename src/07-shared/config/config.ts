@@ -32,7 +32,12 @@ export const config = {
   port: parseInt(process.env.PORT || '5000', 10),
   mongoUri: process.env.MONGODB_URI as string,
   googleApiKey: process.env.GOOGLE_API_KEY as string,
-  geminiApiKey: process.env.GEMINI_API_KEY as string, // GEMINI_API_KEY 추가
+  geminiApiKeys: [
+    process.env.GOOGLE_API_KEY1 as string,
+    process.env.GOOGLE_API_KEY2 as string,
+    process.env.GOOGLE_API_KEY3 as string,
+  ],
+
   jwtSecret: {
     secret: process.env.JWT_SECRET_KEY as string,
     expiresIn: process.env.JWT_EXPIRES_IN as string,
