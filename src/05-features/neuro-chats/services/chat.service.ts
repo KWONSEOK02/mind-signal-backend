@@ -17,6 +17,7 @@ export const chatService = {
         status: 'success',
         message: `관련 사이트를 안내해 드립니다.`,
         url: searchPreList[matchedKeyword],
+        level: 1,
       };
     }
 
@@ -27,12 +28,13 @@ export const chatService = {
 
   async callLLM(
     message: string
-  ): Promise<{ status: string; message: string; url: string }> {
+  ): Promise<{ status: string; message: string; url: string; level: number }> {
     const apiKeys = config.geminiApiKeys;
     const defaultResponse = {
       status: 'success',
       message: '죄송합니다. 요청하신 질문에 대해 답변을 찾지 못했습니다.',
       url: '',
+      level: 3,
     };
 
     if (!apiKeys || !apiKeys.some((k) => !!k)) {
@@ -66,6 +68,11 @@ export const chatService = {
         const response = await result.response;
         const rawResult = response.text().trim();
 
+        // 0. 답변할 수 없는 경우 (Prompt 규칙 3)
+        if (rawResult === 'NoAnswer') {
+          return defaultResponse;
+        }
+
         // 1. 특정 키워드 패턴인지 확인 (Keyword: [키워드])
         if (rawResult.startsWith('Keyword:')) {
           const keyword = rawResult.split('Keyword:')[1]?.trim();
@@ -74,6 +81,7 @@ export const chatService = {
               status: 'success',
               message: '관련 페이지를 안내해 드립니다.',
               url: searchPreList[keyword],
+              level: 1,
             };
           }
 
@@ -86,6 +94,7 @@ export const chatService = {
               status: 'success',
               message: '관련 페이지를 안내해 드립니다.',
               url: searchPreList[foundInList],
+              level: 1,
             };
           }
         }
@@ -95,6 +104,7 @@ export const chatService = {
           status: 'success',
           message: rawResult,
           url: '',
+          level: 2,
         };
       } catch (error: any) {
         console.error(
@@ -129,7 +139,7 @@ export const chatService = {
         text: `보낸 사람: ${email}\n내용: ${message}`,
       });
 
-      return { ok: true };
+      return { status: 'success' };
     },
 
   // 다음버전

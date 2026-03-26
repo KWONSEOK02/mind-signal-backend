@@ -33,7 +33,6 @@ export const handleAskChat = async (req: Request, res: Response) => {
       return res.status(400).json({
         status: 'error',
         message: '이메일과 문의 내용을 모두 입력해 주세요.',
-        ok: false,
       });
     }
 
@@ -44,7 +43,6 @@ export const handleAskChat = async (req: Request, res: Response) => {
     return res.status(500).json({
       status: 'error',
       message: '문의 처리 중 오류가 발생했습니다.',
-      ok: false,
     });
   }
 };
