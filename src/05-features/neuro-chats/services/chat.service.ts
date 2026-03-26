@@ -3,7 +3,7 @@ import { searchPreList } from '../config/search-pre-list';
 import { CHAT_PROMPT } from '../config/chat-prompt';
 import { knowledgeBase } from '../config/knowledge-base';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-
+import nodemailer from 'nodemailer';
 
 export const chatService = {
   async processMessage(message: string) {
@@ -85,7 +85,7 @@ export const chatService = {
             return {
               status: 'success',
               message: '관련 페이지를 안내해 드립니다.',
-              url: searchPreList[foundInList]
+              url: searchPreList[foundInList],
             };
           }
         }
@@ -107,6 +107,50 @@ export const chatService = {
     }
 
     return defaultResponse;
+  },
+
+  // 챗봇 문의하기 서비스 SMTP 로 연동
+  
+  // 구글버전
+  //   async sendInquiryEmail(email: string, message: string) {
+  //     const transporter = nodemailer.createTransport({
+  //       service: 'gmail',
+  //       auth: {
+  //         user: process.env.GMAIL_USER,
+  //         pass: process.env.GMAIL_PASS,
+  //       },
+  //     });
+
+  //     await transporter.sendMail({
+  //       from: `"챗봇 문의" <${process.env.GMAIL_USER}>`,
+  //       to: process.env.GMAIL_USER,
+  //       subject: '챗봇 문의 도착',
+  //       text: `보낸 사람: ${email}\n내용: ${message}`,
+  //     });
+
+  //     return { ok: true };
+  //   },
+
+  // 다음버전
+  async sendInquiryEmail(email: string, message: string) {
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.daum.net',
+      port: 465,
+      secure: true, // SSL 필수
+      auth: {
+        user: process.env.DAUM_USER,
+        pass: process.env.DAUM_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"챗봇 문의" <${process.env.DAUM_USER}>`,
+      to: process.env.DAUM_USER,
+      subject: '챗봇 문의 도착',
+      text: `보낸 사람: ${email}\n내용: ${message}`,
+    });
+
+    return { ok: true };
   },
 };
 

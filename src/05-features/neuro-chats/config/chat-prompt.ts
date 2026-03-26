@@ -16,4 +16,3 @@ export const CHAT_PROMPT = `
 
 사용자 메시지: "{message}"
 `;
-
