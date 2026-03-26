@@ -63,8 +63,9 @@ router.post('/', handleChat);
  *             schema:
  *               type: object
  *               properties:
- *                 ok:
- *                   type: boolean
+ *                 status:
+ *                   type: string
+ *                   example: "success"
  */
 router.post('/ask', handleAskChat);
 
