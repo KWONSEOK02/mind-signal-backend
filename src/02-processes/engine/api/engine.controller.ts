@@ -51,4 +51,26 @@ export const engineController = {
       next(error);
     }
   },
+
+  /** EEG 스트리밍 시작 요청을 파이썬 엔진으로 프록시함 */
+  streamStart: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { groupId, subjectIndex } = req.body;
+      const result = await engineProxyService.streamStart(groupId, subjectIndex);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /** EEG 스트리밍 종료 요청을 파이썬 엔진으로 프록시함 */
+  streamStop: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { groupId, subjectIndex } = req.body;
+      const result = await engineProxyService.streamStop(groupId, subjectIndex);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
 };

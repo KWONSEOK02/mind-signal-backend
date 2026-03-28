@@ -378,4 +378,112 @@ router.post(
   engineController.analyzePipeline
 );
 
+// EEG 스트리밍 프록시 — 프론트엔드 → 백엔드 → 파이썬 엔진
+const streamStartSchema = z.object({
+  groupId: z.string().min(1),
+  subjectIndex: z.number().int().nonnegative(),
+});
+
+/**
+ * @openapi
+ * /api/engine/stream/start:
+ *   post:
+ *     summary: EEG 스트리밍 시작 (엔진 프록시)
+ *     description: |
+ *       등록된 파이썬 엔진에 core.main spawn을 요청하여 EEG 실시간 스트리밍을 시작함.
+ *     tags: [Engine]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [groupId, subjectIndex]
+ *             properties:
+ *               groupId:
+ *                 type: string
+ *                 minLength: 1
+ *                 example: "grp_abc123"
+ *               subjectIndex:
+ *                 type: integer
+ *                 minimum: 0
+ *                 example: 1
+ *     responses:
+ *       200:
+ *         description: 스트리밍 시작 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: "started" }
+ *                 pid: { type: integer, example: 12345 }
+ *                 key: { type: string, example: "grp_abc123:1" }
+ *       409:
+ *         description: 이미 실행 중인 스트림
+ *       503:
+ *         description: 파이썬 엔진 미등록
+ */
+router.post(
+  '/stream/start',
+  authenticate,
+  validate(streamStartSchema),
+  engineController.streamStart
+);
+
+const streamStopSchema = z.object({
+  groupId: z.string().min(1),
+  subjectIndex: z.number().int().nonnegative(),
+});
+
+/**
+ * @openapi
+ * /api/engine/stream/stop:
+ *   post:
+ *     summary: EEG 스트리밍 종료 (엔진 프록시)
+ *     description: |
+ *       등록된 파이썬 엔진에 실행 중인 EEG 스트리밍 프로세스 종료를 요청함.
+ *     tags: [Engine]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [groupId, subjectIndex]
+ *             properties:
+ *               groupId:
+ *                 type: string
+ *                 minLength: 1
+ *                 example: "grp_abc123"
+ *               subjectIndex:
+ *                 type: integer
+ *                 minimum: 0
+ *                 example: 1
+ *     responses:
+ *       200:
+ *         description: 스트리밍 종료 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: "stopped" }
+ *                 key: { type: string, example: "grp_abc123:1" }
+ *       404:
+ *         description: 실행 중인 스트림 없음
+ *       503:
+ *         description: 파이썬 엔진 미등록
+ */
+router.post(
+  '/stream/stop',
+  authenticate,
+  validate(streamStopSchema),
+  engineController.streamStop
+);
+
 export default router;

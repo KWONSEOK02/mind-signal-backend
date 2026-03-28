@@ -44,8 +44,9 @@ export const config = {
   },
   isProduction: nodeEnv === 'production',
   redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: process.env.REDIS_PORT || '6379',
+    url:
+      process.env.REDIS_URL ||
+      `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || '6379'}`,
   },
   dataEngine: {
     // 환경 변수에서 가져오되, 없을 경우를 대비해 기본값을 설정할 수 있습니다.

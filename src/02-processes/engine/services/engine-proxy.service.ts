@@ -107,4 +107,66 @@ export const engineProxyService = {
     const data = await response.json();
     return toCamelCaseKeys(data) as Record<string, unknown>;
   },
+
+  /** 등록된 파이썬 엔진으로 EEG 스트리밍 시작 요청을 프록시함 */
+  async streamStart(
+    groupId: string,
+    subjectIndex: number
+  ): Promise<Record<string, unknown>> {
+    const engineUrl = engineRegistryService.getEngineUrl();
+
+    const response = await fetch(`${engineUrl}/api/stream/start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Engine-Secret': config.dataEngine.secretKey,
+      },
+      body: JSON.stringify({
+        ['group_id']: groupId,
+        ['subject_index']: subjectIndex,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new AppError(
+        `파이썬 엔진 스트림 시작 실패: ${response.status} ${errorText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return toCamelCaseKeys(data) as Record<string, unknown>;
+  },
+
+  /** 등록된 파이썬 엔진으로 EEG 스트리밍 종료 요청을 프록시함 */
+  async streamStop(
+    groupId: string,
+    subjectIndex: number
+  ): Promise<Record<string, unknown>> {
+    const engineUrl = engineRegistryService.getEngineUrl();
+
+    const response = await fetch(`${engineUrl}/api/stream/stop`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Engine-Secret': config.dataEngine.secretKey,
+      },
+      body: JSON.stringify({
+        ['group_id']: groupId,
+        ['subject_index']: subjectIndex,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new AppError(
+        `파이썬 엔진 스트림 종료 실패: ${response.status} ${errorText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return toCamelCaseKeys(data) as Record<string, unknown>;
+  },
 };
