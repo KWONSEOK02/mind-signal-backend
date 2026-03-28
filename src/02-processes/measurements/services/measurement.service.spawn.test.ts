@@ -21,7 +21,7 @@ describe('measurement.service.ts: 엔진 프록시 방식 전환 검증', () => 
 
   it('서비스가 child_process spawn을 직접 사용하지 않음', () => {
     expect(serviceSource).not.toContain("from 'child_process'");
-    expect(serviceSource).not.toContain("import { spawn }");
+    expect(serviceSource).not.toContain('import { spawn }');
   });
 
   it('서비스가 engineProxyService를 import함', () => {

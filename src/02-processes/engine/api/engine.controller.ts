@@ -56,7 +56,10 @@ export const engineController = {
   streamStart: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { groupId, subjectIndex } = req.body;
-      const result = await engineProxyService.streamStart(groupId, subjectIndex);
+      const result = await engineProxyService.streamStart(
+        groupId,
+        subjectIndex
+      );
       res.status(200).json(result);
     } catch (error) {
       next(error);
