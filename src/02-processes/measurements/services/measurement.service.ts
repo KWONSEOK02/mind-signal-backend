@@ -1,9 +1,8 @@
-import { spawn } from 'child_process';
 import { Session } from '@06-entities/sessions';
 import { redisService } from '@07-shared/lib/redis';
 import { SocketService } from '@07-shared/lib/socket';
-import { config } from '@07-shared/config/config';
-import { AppError } from '@07-shared/errors'; // 전역 에러 클래스 사용
+import { AppError } from '@07-shared/errors';
+import { engineProxyService } from '@02-processes/engine/services/engine-proxy.service';
 
 export const startMeasurementService = async (sessionId: string) => {
   // 1. 세션 조회 및 검증함
@@ -55,60 +54,29 @@ export const startMeasurementService = async (sessionId: string) => {
     }
   });
 
-  // 6. 외부 Python 엔진 실행함 (conda 환경 Python 바이너리 사용함)
-  const enginePath = config.dataEngine.path;
-  const pythonProcess = spawn(
-    config.dataEngine.pythonBin,
-    ['-m', 'core.main', session.groupId, String(session.subjectIndex)],
-    { cwd: enginePath }
-  );
-
-  // 7. Python 프로세스 에러 핸들러 추가함 (실행 파일 없음 등 처리함)
-  pythonProcess.on('error', async (err) => {
-    console.error('Python 프로세스 실행 실패:', err);
-    // 세션 상태 업데이트함
+  // 6. 엔진 프록시를 통해 EEG 스트리밍 시작 요청함 (로컬 FastAPI → core.main spawn)
+  try {
+    const result = await engineProxyService.streamStart(
+      session.groupId,
+      session.subjectIndex
+    );
+    console.log(`EEG 스트리밍 시작됨: ${JSON.stringify(result)}`);
+  } catch (err) {
+    console.error('EEG 스트리밍 시작 실패:', err);
     session.status = 'CANCELLED';
-    try {
-      await session.save();
-      // 측정 완료 이벤트 발행함
-      SocketService.emitLiveEvent('measurement-complete', {
-        sessionId: session._id,
-        status: session.status,
-      });
-    } catch (saveErr) {
-      console.error('세션 상태 저장 실패:', saveErr);
-    }
-    // Redis 구독 정리함
+    await session.save();
+    SocketService.emitLiveEvent('measurement-complete', {
+      sessionId: session._id,
+      status: session.status,
+    });
     try {
       await subscriber.unsubscribe(channel);
       await subscriber.quit();
     } catch (cleanupErr) {
       console.error('Redis 정리 중 에러:', cleanupErr);
     }
-  });
-
-  // 8. Python 종료 시 상태 업데이트 및 Redis 정리함 (try/finally로 누수 방지함)
-  pythonProcess.on('close', async (code) => {
-    console.log(`Python 프로세스 종료 (exit code: ${code})`);
-    // 종료 코드 기반으로 최종 세션 상태 결정함
-    session.status = code === 0 ? 'COMPLETED' : 'CANCELLED';
-    try {
-      await session.save();
-      // 측정 완료 이벤트 발행함
-      SocketService.emitLiveEvent('measurement-complete', {
-        sessionId: session._id,
-        status: session.status,
-      });
-    } finally {
-      // session.save() 실패 여부와 무관하게 Redis 구독 반드시 정리함
-      try {
-        await subscriber.unsubscribe(channel);
-        await subscriber.quit();
-      } catch (cleanupErr) {
-        console.error('Redis 정리 중 에러:', cleanupErr);
-      }
-    }
-  });
+    throw err;
+  }
 
   return { measuredAt: session.measuredAt };
 };
