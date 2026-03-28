@@ -8,7 +8,7 @@ const router = Router();
  * @openapi
  * tags:
  *   - name: Users
- * description: 사용자 정보 관리
+ *     description: 사용자 정보 관리
  */
 
 /**
@@ -34,8 +34,14 @@ const router = Router();
  *                     email: { type: string, example: "testuser@gmail.com" }
  *                     name: { type: string, example: "김뇌파" }
  *                     brainType: { type: string, example: "PENDING" }
- *                     loginType: { type: string, example: "local" }
+ *                     loginType:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                         enum: [local, google, kakao]
+ *                       example: ["local"]
  *                     membershipLevel: { type: string, example: "BASIC" }
+ *                     providerId: { type: string, nullable: true, example: null }
  *                     id: { type: string, example: "695a003df33270433494b87e" }
  *       401:
  *         description: 인증 실패 (토큰 문제)
