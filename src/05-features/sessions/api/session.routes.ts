@@ -16,7 +16,7 @@ const router = Router();
  * @openapi
  * tags:
  *   - name: Sessions
- * description: 기기 페어링 및 세션 상태 관리
+ *     description: 기기 페어링 및 세션 상태 관리
  */
 
 /**
@@ -31,6 +31,17 @@ const router = Router();
  *     tags: [Sessions]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               groupId:
+ *                 type: string
+ *                 description: 기존 그룹에 추가할 때만 전달. 생략 시 새 그룹 생성
+ *                 example: "65c9f0b2a1b2c3d4e5f67800"
  *     responses:
  *       201:
  *         description: 세션 및 페어링 토큰 생성 성공
@@ -43,14 +54,22 @@ const router = Router();
  *                 data:
  *                   type: object
  *                   properties:
+ *                     id:
+ *                       type: string
+ *                       description: 생성된 세션 ID(ObjectId)
+ *                       example: "65c9f0b2a1b2c3d4e5f67890"
+ *                     groupId:
+ *                       type: string
+ *                       description: 세션이 속한 그룹 ID
+ *                       example: "65c9f0b2a1b2c3d4e5f67800"
+ *                     subjectIndex:
+ *                       type: integer
+ *                       description: 그룹 내 피실험자 순번
+ *                       example: 1
  *                     pairingToken:
  *                       type: string
  *                       description: QR로 노출되는 페어링 토큰(대문자 HEX)
  *                       example: "A1B2C3"
- *                     sessionId:
- *                       type: string
- *                       description: 생성된 세션 ID(ObjectId)
- *                       example: "65c9f0b2a1b2c3d4e5f67890"
  *                     expiresAt:
  *                       type: string
  *                       format: date-time
@@ -66,14 +85,14 @@ const router = Router();
  *                 status: { type: string, example: "fail" }
  *                 message: { type: string, example: "유효하지 않은 토큰입니다." }
  *       500:
- *         description: 서버 오류(세션 저장 실패 등)
+ *         description: 서버 오류(subjectIndex 할당 실패 등)
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 status: { type: string, example: "fail" }
- *                 message: { type: string, example: "서버 오류가 발생했습니다." }
+ *                 status: { type: string, example: "error" }
+ *                 message: { type: string, example: "subjectIndex 할당에 실패했습니다." }
  */
 
 router.post('/', authenticate, sessionsController.createSession);
@@ -110,6 +129,11 @@ router.post('/', authenticate, sessionsController.createSession);
  *                   type: object
  *                   properties:
  *                     id: { type: string, example: "65c9f0b2a1b2c3d4e5f67890" }
+ *                     groupId: { type: string, example: "65c9f0b2a1b2c3d4e5f67800" }
+ *                     subjectIndex:
+ *                       type: integer
+ *                       nullable: true
+ *                       example: 1
  *                     pairingToken: { type: string, example: "A1B2C3" }
  *                     userId: { type: string, example: "65c9f0b2a1b2c3d4e5f67891" }
  *                     status:
@@ -131,7 +155,7 @@ router.post('/', authenticate, sessionsController.createSession);
  *                       example: null
  *
  *       400:
- *         description: 상태 전이 불가 또는 검증 실패
+ *         description: 상태 전이 불가 또는 유효하지 않은 사용자 ID
  *         content:
  *           application/json:
  *             schema:
@@ -143,7 +167,7 @@ router.post('/', authenticate, sessionsController.createSession);
  *                   example: "현재 세션 상태(MEASURING)에서는 페어링할 수 없습니다."
  *
  *       401:
- *         description: 인증 실패 또는 토큰 만료
+ *         description: 인증 실패 또는 페어링 토큰 만료
  *         content:
  *           application/json:
  *             schema:
@@ -152,17 +176,17 @@ router.post('/', authenticate, sessionsController.createSession);
  *                 status: { type: string, example: "fail" }
  *                 message:
  *                   type: string
- *                   example: "페어링 토큰이 만료되었습니다."
+ *                   example: "페어링 토큰이 만료되었습니다. 다시 시도해주세요."
  *
  *       404:
- *         description: INVALID_TOKEN
+ *         description: 유효하지 않은 페어링 토큰
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
  *                 status: { type: string, example: "fail" }
- *                 message: { type: string, example: "INVALID_TOKEN" }
+ *                 message: { type: string, example: "존재하지 않거나 유효하지 않은 토큰입니다" }
  *
  *       500:
  *         description: 서버 오류
@@ -171,8 +195,8 @@ router.post('/', authenticate, sessionsController.createSession);
  *             schema:
  *               type: object
  *               properties:
- *                 status: { type: string, example: "fail" }
- *                 message: { type: string, example: "서버 오류가 발생했습니다." }
+ *                 status: { type: string, example: "error" }
+ *                 message: { type: string, example: "서버 내부에 예상치 못한 오류가 발생했습니다." }
  */
 
 router.post('/:pairingToken/pair', authenticate, sessionsController.pairDevice);
@@ -222,13 +246,13 @@ router.post('/:pairingToken/pair', authenticate, sessionsController.pairDevice);
  *                   properties:
  *                     id: { type: string, example: "65c9f0b2a1b2c3d4e5f67999" }
  *                     userId: { type: string, example: "65c9f0b2a1b2c3d4e5f67891" }
- *                     sessionId: { type: string, example: "65c9f0b2a1b2c3d4e5f67890" }
  *                     versionId: { type: string, example: "v1.0" }
  *                     isResearchAgreed: { type: boolean, example: true }
- *                     createdAt:
+ *                     withdrawnAt:
  *                       type: string
  *                       format: date-time
- *                       example: "2026-02-12T00:00:00.000Z"
+ *                       nullable: true
+ *                       example: null
  *
  *       400:
  *         description: 잘못된 요청 또는 세션 상태 오류
@@ -273,10 +297,10 @@ router.post('/:pairingToken/pair', authenticate, sessionsController.pairDevice);
  *             schema:
  *               type: object
  *               properties:
- *                 status: { type: string, example: "fail" }
+ *                 status: { type: string, example: "error" }
  *                 message:
  *                   type: string
- *                   example: "서버 오류가 발생했습니다."
+ *                   example: "서버 내부에 예상치 못한 오류가 발생했습니다."
  */
 
 router.post(
@@ -285,7 +309,65 @@ router.post(
   sessionsController.submitConsent
 );
 
-// 특정 그룹의 실시간 합류 현황 조회 수행함 (운영자 대시보드 폴링용)
+/**
+ * @openapi
+ * /api/sessions/group/{groupId}/status:
+ *   get:
+ *     summary: 그룹 세션 참가 현황 조회 (운영자 대시보드 폴링용)
+ *     description: 특정 그룹에 속한 모든 세션의 실시간 합류 현황을 조회합니다.
+ *     tags: [Sessions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: groupId
+ *         in: path
+ *         required: true
+ *         description: 조회할 그룹 ID
+ *         schema:
+ *           type: string
+ *           example: "65c9f0b2a1b2c3d4e5f67800"
+ *     responses:
+ *       200:
+ *         description: 그룹 세션 현황 조회 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: "success" }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     groupId:
+ *                       type: string
+ *                       example: "65c9f0b2a1b2c3d4e5f67800"
+ *                     sessions:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           subjectIndex:
+ *                             type: integer
+ *                             description: 그룹 내 피실험자 순번
+ *                             example: 1
+ *                           status:
+ *                             type: string
+ *                             enum: [CREATED, PAIRED, MEASURING, COMPLETED, EXPIRED, CANCELLED]
+ *                             example: "PAIRED"
+ *                           guestJoined:
+ *                             type: boolean
+ *                             description: 피실험자 합류 여부 (PAIRED 또는 MEASURING 상태)
+ *                             example: true
+ *       401:
+ *         description: 인증 실패(토큰 누락/만료/비정상)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: "fail" }
+ *                 message: { type: string, example: "유효하지 않은 토큰입니다." }
+ */
 router.get(
   '/group/:groupId/status',
   authenticate,

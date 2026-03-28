@@ -32,15 +32,21 @@ export const config = {
   port: parseInt(process.env.PORT || '5000', 10),
   mongoUri: process.env.MONGODB_URI as string,
   googleApiKey: process.env.GOOGLE_API_KEY as string,
-  geminiApiKey: process.env.GEMINI_API_KEY as string, // GEMINI_API_KEY 추가
+  geminiApiKeys: [
+    process.env.GOOGLE_API_KEY1 as string,
+    process.env.GOOGLE_API_KEY2 as string,
+    process.env.GOOGLE_API_KEY3 as string,
+  ],
+
   jwtSecret: {
     secret: process.env.JWT_SECRET_KEY as string,
     expiresIn: process.env.JWT_EXPIRES_IN as string,
   },
   isProduction: nodeEnv === 'production',
   redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: process.env.REDIS_PORT || '6379',
+    url:
+      process.env.REDIS_URL ||
+      `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || '6379'}`,
   },
   dataEngine: {
     // 환경 변수에서 가져오되, 없을 경우를 대비해 기본값을 설정할 수 있습니다.
@@ -51,6 +57,7 @@ export const config = {
     baseUrl: process.env.DATA_ENGINE_URL || 'http://localhost:5002',
     // conda 환경 Python 실행 파일 경로 (기본값: 시스템 python)
     pythonBin: process.env.DATA_ENGINE_PYTHON ?? 'python',
+    secretKey: process.env.ENGINE_SECRET_KEY || 'change-me-in-production',
   },
   // 소셜 로그인 OAuth 설정 (선택적 환경변수)
   googleClientId: process.env.GOOGLE_CLIENT_ID,

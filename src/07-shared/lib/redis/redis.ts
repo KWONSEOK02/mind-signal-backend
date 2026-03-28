@@ -6,12 +6,10 @@ class RedisService {
   public client: RedisClientType;
 
   private constructor() {
-    // 2. process.env 대신 config 객체 사용
-    const { host, port } = config.redis;
+    // 2. process.env 대신 config 객체 사용 (REDIS_URL 우선, 없으면 HOST/PORT 폴백)
+    const { url } = config.redis;
 
-    this.client = createClient({
-      url: `redis://${host}:${port}`,
-    });
+    this.client = createClient({ url });
 
     this.client.on('error', (err) => console.error('Redis Client Error', err));
     this.client.on('connect', () => console.log('Redis Client Connected'));
