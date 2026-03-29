@@ -4,9 +4,10 @@ import { CHAT_PROMPT } from '../config/chat-prompt';
 import { knowledgeBase } from '../config/knowledge-base';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import nodemailer from 'nodemailer';
+import { AnalysisResult } from '@06-entities/analysis-results';
 
 export const chatService = {
-  async processMessage(message: string) {
+  async processMessage(message: string, userId?: string, groupId?: string) {
     // 1. search_pre_list 에서 직접 매칭 확인 (성능 및 정확도를 위해 LLM 전 단계에서 수행)
     const matchedKeyword = Object.keys(searchPreList).find((keyword) =>
       message.includes(keyword)
@@ -21,13 +22,23 @@ export const chatService = {
       };
     }
 
-    // 2. LLM 호출 (지식 베이스 답변 또는 페이지 추천)
-    const llmResult = await this.callLLM(message);
+    // 2. groupId가 있으면 DB에서 분석 markdown 조회함
+    let analysisMarkdown: string | undefined;
+    if (groupId) {
+      const result = (await AnalysisResult.findOne({ groupId })) as any;
+      if (result?.markdown) {
+        analysisMarkdown = result.markdown;
+      }
+    }
+
+    // 3. LLM 호출 (지식 베이스 답변 또는 페이지 추천)
+    const llmResult = await this.callLLM(message, analysisMarkdown);
     return llmResult;
   },
 
   async callLLM(
-    message: string
+    message: string,
+    analysisMarkdown?: string
   ): Promise<{ status: string; message: string; url: string; level: number }> {
     const apiKeys = config.geminiApiKeys;
     const defaultResponse = {
@@ -43,8 +54,12 @@ export const chatService = {
     }
 
     const keywords = Object.keys(searchPreList).join(', ');
+    const analysisSection = analysisMarkdown
+      ? `\n[개인 분석 리포트]\n${analysisMarkdown}\n`
+      : '';
     const prompt = CHAT_PROMPT.replace('{knowledgeBase}', knowledgeBase)
       .replace('{keywords}', keywords)
+      .replace('{analysisMarkdown}', analysisSection)
       .replace('{message}', message);
 
     for (let i = 0; i < apiKeys.length; i++) {
