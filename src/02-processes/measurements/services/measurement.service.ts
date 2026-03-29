@@ -3,6 +3,10 @@ import { redisService } from '@07-shared/lib/redis';
 import { SocketService } from '@07-shared/lib/socket';
 import { AppError } from '@07-shared/errors';
 import { engineProxyService } from '@02-processes/engine/services/engine-proxy.service';
+import { RedisClientType } from 'redis';
+
+/** Redis 구독자 레지스트리 — 키: `${groupId}:${subjectIndex}` */
+const subscriberRegistry = new Map<string, RedisClientType>();
 
 export const startMeasurementService = async (sessionId: string) => {
   // 1. 세션 조회 및 검증함
@@ -39,6 +43,10 @@ export const startMeasurementService = async (sessionId: string) => {
     await session.save();
     throw err;
   }
+
+  // 구독자 레지스트리에 등록함
+  const registryKey = `${session.groupId}:${session.subjectIndex}`;
+  subscriberRegistry.set(registryKey, subscriber as unknown as RedisClientType);
 
   const channel = `mind-signal:${session.groupId}:subject:${session.subjectIndex}`;
   await subscriber.subscribe(channel, (message: string) => {
@@ -79,4 +87,57 @@ export const startMeasurementService = async (sessionId: string) => {
   }
 
   return { measuredAt: session.measuredAt };
+};
+
+/**
+ * 측정 종료 후 세션 COMPLETED 전이 + Redis 구독 해제 수행함
+ * 두 subject 모두 COMPLETED 시 포스트-측정 오케스트레이션 트리거함
+ */
+export const stopMeasurementService = async (
+  groupId: string,
+  subjectIndex: number
+) => {
+  const session = await Session.findOne({ groupId, subjectIndex });
+  if (!session) {
+    throw new AppError('세션을 찾을 수 없습니다.', 404);
+  }
+
+  if (!session.canTransitionTo('COMPLETED')) {
+    throw new AppError(
+      `현재 ${session.status} 상태에서는 측정을 완료할 수 없습니다.`,
+      400
+    );
+  }
+
+  // 세션 상태 COMPLETED 전이함
+  session.status = 'COMPLETED';
+  await session.save();
+
+  // Redis 구독자 정리함
+  const registryKey = `${groupId}:${subjectIndex}`;
+  const subscriber = subscriberRegistry.get(registryKey);
+  if (subscriber) {
+    try {
+      const channel = `mind-signal:${groupId}:subject:${subjectIndex}`;
+      await subscriber.unsubscribe(channel);
+      await subscriber.quit();
+    } catch (err) {
+      console.error('Redis 구독 해제 중 에러:', err);
+    }
+    subscriberRegistry.delete(registryKey);
+  }
+
+  // Socket.io 측정 완료 이벤트 발행함
+  SocketService.emitLiveEvent('measurement-complete', {
+    sessionId: session._id,
+    groupId,
+    subjectIndex,
+    status: 'COMPLETED',
+  });
+
+  // 두 subject 모두 COMPLETED인지 확인함
+  const allSessions = await Session.find({ groupId });
+  const allCompleted = allSessions.every((s) => s.status === 'COMPLETED');
+
+  return { allCompleted };
 };

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { engineRegistryService } from '../services/engine-registry.service';
 import { engineProxyService } from '../services/engine-proxy.service';
+import { stopMeasurementService } from '@02-processes/measurements/services/measurement.service';
 
 export const engineController = {
   /** 파이썬 엔진 URL 등록 처리함 */
@@ -51,12 +52,34 @@ export const engineController = {
     }
   },
 
-  /** EEG 스트리밍 종료 요청을 파이썬 엔진으로 프록시함 */
+  /** EEG 스트리밍 종료 요청을 파이썬 엔진으로 프록시 + 세션 COMPLETED 전이함 */
   streamStop: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { groupId, subjectIndex } = req.body;
-      const result = await engineProxyService.streamStop(groupId, subjectIndex);
-      res.status(200).json(result);
+
+      // 1. 엔진에 스트리밍 종료 요청함
+      const engineResult = await engineProxyService.streamStop(
+        groupId,
+        subjectIndex
+      );
+
+      // 2. 세션 COMPLETED 전이 + Redis 구독 해제함
+      const { allCompleted } = await stopMeasurementService(
+        groupId,
+        subjectIndex
+      );
+
+      // 3. 두 subject 모두 완료 시 포스트-측정 오케스트레이션 트리거함
+      if (allCompleted) {
+        // Task 11에서 구현할 postMeasurementPipeline 호출 (비동기, 응답 차단하지 않음)
+        import('@02-processes/post-measurement')
+          .then(({ runPostMeasurementPipeline }) =>
+            runPostMeasurementPipeline(groupId)
+          )
+          .catch((err) => console.error('포스트-측정 파이프라인 에러:', err));
+      }
+
+      res.status(200).json({ ...engineResult, allCompleted });
     } catch (error) {
       next(error);
     }
