@@ -14,21 +14,6 @@ export const engineController = {
     }
   },
 
-  /** 분석 요청을 파이썬 엔진으로 프록시함 */
-  analyze: async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { groupId, subjectIndices, includeMarkdown } = req.body;
-      const result = await engineProxyService.analyze(
-        groupId,
-        subjectIndices,
-        includeMarkdown
-      );
-      res.status(200).json(result);
-    } catch (error) {
-      next(error);
-    }
-  },
-
   /** 파이프라인 분석 요청을 파이썬 엔진으로 프록시함 */
   analyzePipeline: async (req: Request, res: Response, next: NextFunction) => {
     try {
