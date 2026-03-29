@@ -6,6 +6,7 @@ import { surveyApi } from '@05-features/surveys';
 import { measurementApi } from '@02-processes/measurements';
 import engineRouter from '@02-processes/engine/api/engine.routes';
 import { chatApi } from '@05-features/neuro-chats';
+import analysisRouter from '@05-features/analysis-results/api/analysis.routes';
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use('/surveys', surveyApi);
 router.use('/measurements', measurementApi);
 router.use('/engine', engineRouter);
 router.use('/chat', chatApi);
+router.use('/analysis', analysisRouter);
 
 export default router;
