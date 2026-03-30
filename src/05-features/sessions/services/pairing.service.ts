@@ -9,7 +9,10 @@ import crypto from 'crypto';
  * $inc 원자적 연산으로 동시 요청 시에도 고유한 subjectIndex 보장함
  * @param groupId 기존 그룹에 추가할 경우 제공하며, 없을 경우 신규 생성함
  */
-export const createGroupSessionProcess = async (groupId?: string) => {
+export const createGroupSessionProcess = async (
+  groupId?: string,
+  creatorId?: string
+) => {
   // 1. 그룹 식별자 결정함 (제공되지 않으면 신규 생성 수행함)
   const effectiveGroupId =
     groupId || crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -39,6 +42,7 @@ export const createGroupSessionProcess = async (groupId?: string) => {
     pairingToken,
     status: 'CREATED',
     expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5분 유효함
+    ...(creatorId ? { creatorId: new Types.ObjectId(creatorId) } : {}),
   });
 
   return await newSession.save();
