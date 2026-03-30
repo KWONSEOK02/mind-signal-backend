@@ -41,6 +41,10 @@ export const getAnalysisResult = async (
     const user1 = result.user1Id as any;
     const user2 = result.user2Id as any;
 
+    const isBTI =
+      (user1 as any)?._id?.toString() === (user2 as any)?._id?.toString();
+    const subjects = (result.pipelineResult as any)?.subjects;
+
     res.status(200).json({
       status: 'success',
       data: {
@@ -52,6 +56,9 @@ export const getAnalysisResult = async (
         markdown: result.markdown,
         user1Name: user1?.name || null,
         user2Name: user2?.name || null,
+        isBTI,
+        metricsMean: subjects?.[0]?.metricsMean ?? null,
+        wavesMean: subjects?.[0]?.wavesMean ?? null,
       },
     });
   } catch (error) {

@@ -69,12 +69,20 @@ export const engineController = {
         subjectIndex
       );
 
-      // 3. 두 subject 모두 완료 시 포스트-측정 오케스트레이션 트리거함
+      // 3. 모든 subject 완료 시 포스트-측정 오케스트레이션 트리거함
       if (allCompleted) {
-        // Task 11에서 구현할 postMeasurementPipeline 호출 (비동기, 응답 차단하지 않음)
+        // COMPLETED 세션 수로 DUAL/BTI 판별함 (CANCELLED/EXPIRED 제외)
+        const { Session: SessionModel } = await import('@06-entities/sessions');
+        const completedCount = await SessionModel.countDocuments({
+          groupId,
+          status: 'COMPLETED',
+        });
+
         import('@02-processes/post-measurement')
-          .then(({ runPostMeasurementPipeline }) =>
-            runPostMeasurementPipeline(groupId)
+          .then((mod) =>
+            completedCount >= 2
+              ? mod.runPostMeasurementPipeline(groupId)
+              : mod.runBTIAnalysisPipeline(groupId)
           )
           .catch((err) => console.error('포스트-측정 파이프라인 에러:', err));
       }
