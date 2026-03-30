@@ -23,7 +23,7 @@ export const optionalAuthenticate = (
       config.jwtSecret.secret as string
     ) as JwtPayload;
 
-    (req as any).user = { id: payload.id };
+    (req as AuthedRequest).user = { id: payload.id };
   } catch {
     // 토큰이 유효하지 않아도 비인증 상태로 통과함
   }

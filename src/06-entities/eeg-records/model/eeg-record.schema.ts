@@ -6,7 +6,7 @@ import { Schema, model, Model, HydratedDocument, Types } from 'mongoose';
 export interface EegRecord {
   userId: Types.ObjectId; // User 엔티티 참조
   sessionId: Types.ObjectId; // Session 엔티티 참조
-  consentId: Types.ObjectId; // Consent 엔티티 참조
+  consentId: Types.ObjectId | null; // Consent 엔티티 참조 (미존재 시 null)
   rawDataPath: string; // 원천 데이터 파일 경로
   eegSummary: Record<string, any>; // 추출된 뇌파 특징 데이터
   measuredAt: Date; // 측정 시점
@@ -25,7 +25,7 @@ const eegRecordSchema = new Schema<EegRecord, EegRecordModel, EegRecordMethods>(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     sessionId: { type: Schema.Types.ObjectId, ref: 'Session', required: true },
-    consentId: { type: Schema.Types.ObjectId, ref: 'Consent', required: true },
+    consentId: { type: Schema.Types.ObjectId, ref: 'Consent', default: null },
     rawDataPath: { type: String, required: true },
     eegSummary: { type: Object, default: {} },
     measuredAt: { type: Date, required: true, default: Date.now },

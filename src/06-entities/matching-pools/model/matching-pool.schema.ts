@@ -4,7 +4,7 @@ import { Schema, model, Model, HydratedDocument, Types } from 'mongoose';
 export interface MatchingPool {
   user1Id: Types.ObjectId; // 첫 번째 사용자 참조
   user2Id: Types.ObjectId; // 두 번째 사용자 참조
-  analysisId: Types.ObjectId; // 근거가 되는 AnalysisResult 참조
+  analysisId: Types.ObjectId | null; // 근거가 되는 AnalysisResult 참조 (PENDING 시 null)
   groupId: string; // 그룹 역추적 + 멱등성 가드 키
   matchingScore: number; // 비정규화된 매칭 점수 (0-100)
   status: 'PENDING' | 'COMPLETED'; // 분석 진행 상태
@@ -30,7 +30,7 @@ const matchingPoolSchema = new Schema<
     analysisId: {
       type: Schema.Types.ObjectId,
       ref: 'AnalysisResult',
-      required: true,
+      default: null,
     },
     groupId: {
       type: String,

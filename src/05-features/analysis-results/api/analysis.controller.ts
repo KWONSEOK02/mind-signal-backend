@@ -18,9 +18,12 @@ export const getAnalysisResult = async (
     }
 
     // 소유권 검증: 요청자가 해당 그룹 참여자인지 확인함
-    const sessions = await Session.find({ groupId });
+    const sessions = await Session.find({ groupId }).populate('userId', 'name');
+    if (sessions.length === 0) {
+      throw new AppError('해당 그룹을 찾을 수 없습니다.', 404);
+    }
     const isParticipant = sessions.some(
-      (s) => s.userId?.toString() === req.user!.id
+      (s) => s.userId && s.userId._id?.toString() === req.user!.id
     );
     if (!isParticipant) {
       throw new AppError('해당 그룹에 대한 접근 권한이 없습니다.', 403);

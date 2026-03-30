@@ -62,12 +62,20 @@ export const checkGroupStatus = async (
       'name email'
     );
 
+    if (sessions.length === 0) {
+      throw new AppError('해당 그룹을 찾을 수 없습니다.', 404);
+    }
+
     // 소유권 검증: 요청자가 해당 그룹 세션의 참여자인지 확인함
-    const isParticipant = sessions.some(
-      (s) => s.userId && s.userId._id?.toString() === req.user!.id
-    );
-    if (!isParticipant) {
-      throw new AppError('해당 그룹에 대한 접근 권한이 없습니다.', 403);
+    // subject 합류 전(userId=null) 상태에서는 인증된 사용자 접근 허용 (operator 폴링)
+    const hasBindings = sessions.some((s) => s.userId);
+    if (hasBindings) {
+      const isParticipant = sessions.some(
+        (s) => s.userId && s.userId._id?.toString() === req.user!.id
+      );
+      if (!isParticipant) {
+        throw new AppError('해당 그룹에 대한 접근 권한이 없습니다.', 403);
+      }
     }
 
     // 프론트엔드 위젯 표시를 위한 데이터 가공 수행함

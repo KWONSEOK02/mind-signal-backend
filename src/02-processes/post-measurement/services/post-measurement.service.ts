@@ -79,7 +79,7 @@ export const runPostMeasurementPipeline = async (groupId: string) => {
   } catch (err) {
     console.error(`[postMeasurement] 엔진 파이프라인 분석 실패:`, err);
     // 엔진 실패 시 PENDING 상태로 생성하여 재시도 가능하도록 함
-    await (MatchingPool as any).create({
+    await MatchingPool.create({
       groupId,
       user1Id,
       user2Id,
