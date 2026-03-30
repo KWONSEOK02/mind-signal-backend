@@ -69,4 +69,6 @@ export const config = {
 } as const; // 읽기 전용으로 설정
 
 console.log(`현재 구동 환경: ${config.env}`);
-console.log(`연결된 DB URI: ${config.mongoUri}`);
+console.log(
+  `연결된 DB URI: ${config.isProduction ? config.mongoUri.replace(/:([^@]+)@/, ':***@') : config.mongoUri}`
+);
