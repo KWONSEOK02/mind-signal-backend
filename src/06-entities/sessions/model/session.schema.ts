@@ -8,6 +8,7 @@ export interface Session {
   subjectIndex: number | null; // 추가: 해당 그룹 내 피실험자 할당 번호(1 또는 2)임
   pairingToken: string; // 고유 페어링 토큰임
   userId: Types.ObjectId | null; // 페어링 성공 시 바인딩되는 사용자 ID임
+  creatorId: Types.ObjectId | null; // 세션 생성자(운영자) ID임
   status:
     | 'CREATED'
     | 'PAIRED'
@@ -50,6 +51,11 @@ const sessionSchema = new Schema<Session, SessionModel, SessionMethods>(
       index: true,
     },
     userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    creatorId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       default: null,
@@ -131,6 +137,10 @@ sessionSchema.index(
   { groupId: 1, subjectIndex: 1 },
   { unique: true, sparse: true, name: 'groupId_subjectIndex_unique' }
 );
+
+/** 조회 성능 개선을 위한 복합 인덱스 선언함 */
+sessionSchema.index({ userId: 1, status: 1 });
+sessionSchema.index({ creatorId: 1, status: 1 });
 
 /** 7. 모델 생성 및 수출 */
 export const Session = model<Session, SessionModel>('Session', sessionSchema);

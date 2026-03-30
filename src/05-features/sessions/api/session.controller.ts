@@ -16,7 +16,7 @@ import { AuthedRequest } from '@07-shared/types';
  * [Controller] 새로운 그룹 세션 또는 그룹 내 추가 세션 생성 수행함
  */
 export const createSession = async (
-  req: Request,
+  req: AuthedRequest,
   res: Response,
   next: NextFunction
 ) => {
@@ -24,7 +24,7 @@ export const createSession = async (
     const { groupId } = req.body; // 기존 그룹에 추가할 경우 groupId를 본문에서 받음
 
     // 비즈니스 프로세스 호출하여 세션 생성 수행함
-    const newSession = await createGroupSessionProcess(groupId);
+    const newSession = await createGroupSessionProcess(groupId, req.user?.id);
 
     res.status(201).json({
       status: 'success',
@@ -71,7 +71,9 @@ export const checkGroupStatus = async (
     const hasBindings = sessions.some((s) => s.userId);
     if (hasBindings) {
       const isParticipant = sessions.some(
-        (s) => s.userId && s.userId._id?.toString() === req.user!.id
+        (s) =>
+          (s.userId && s.userId._id?.toString() === req.user!.id) ||
+          s.creatorId?.toString() === req.user!.id
       );
       if (!isParticipant) {
         throw new AppError('해당 그룹에 대한 접근 권한이 없습니다.', 403);
