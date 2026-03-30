@@ -1,4 +1,5 @@
 import { Response, NextFunction } from 'express';
+import { Types } from 'mongoose';
 import { AnalysisResult } from '@06-entities/analysis-results';
 import { Session } from '@06-entities/sessions';
 import { AppError } from '@07-shared/errors';
@@ -23,7 +24,9 @@ export const getAnalysisResult = async (
       throw new AppError('해당 그룹을 찾을 수 없습니다.', 404);
     }
     const isParticipant = sessions.some(
-      (s) => s.userId && s.userId._id?.toString() === req.user!.id
+      (s) =>
+        (s.userId && s.userId._id?.toString() === req.user!.id) ||
+        s.creatorId?.toString() === req.user!.id
     );
     if (!isParticipant) {
       throw new AppError('해당 그룹에 대한 접근 권한이 없습니다.', 403);
@@ -54,6 +57,63 @@ export const getAnalysisResult = async (
         user2Name: user2?.name || null,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** 내 분석 결과 목록 조회 수행함 */
+export const getMyAnalysisResults = async (
+  req: AuthedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user?.id) {
+      throw new AppError('인증이 필요합니다.', 401);
+    }
+
+    const userId = new Types.ObjectId(req.user.id);
+
+    // creatorId 또는 userId 기준으로 완료된 세션 조회함
+    const sessions = await Session.find({
+      $or: [{ userId }, { creatorId: userId }],
+      status: 'COMPLETED',
+    }).select('groupId');
+
+    // 중복 groupId 제거함
+    const groupIds = [...new Set(sessions.map((s) => s.groupId))];
+
+    if (groupIds.length === 0) {
+      return res.status(200).json({ status: 'success', data: [] });
+    }
+
+    /** lean() 조회용 분석 결과 타입 정의함 */
+    interface LeanAnalysisResult {
+      groupId: string;
+      matchingScore: number;
+      user1Id: { name: string } | null;
+      user2Id: { name: string } | null;
+      createdAt: Date;
+    }
+
+    // .lean()으로 조회하여 toJSON의 createdAt 삭제 회피함
+    const results = await AnalysisResult.find({
+      groupId: { $in: groupIds },
+    })
+      .populate('user1Id user2Id', 'name')
+      .sort({ createdAt: -1 })
+      .lean<LeanAnalysisResult[]>();
+
+    const data = results.map((r) => ({
+      groupId: r.groupId,
+      matchingScore: r.matchingScore,
+      user1Name: r.user1Id?.name || null,
+      user2Name: r.user2Id?.name || null,
+      createdAt: r.createdAt,
+    }));
+
+    res.status(200).json({ status: 'success', data });
   } catch (error) {
     next(error);
   }
