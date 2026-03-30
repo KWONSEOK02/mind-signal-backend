@@ -10,6 +10,7 @@ import {
   submitConsentSchema,
 } from '@05-features/sessions/dto/session.dto';
 import { Session } from '@06-entities/sessions';
+import { AuthedRequest } from '@07-shared/types';
 
 /**
  * [Controller] 새로운 그룹 세션 또는 그룹 내 추가 세션 생성 수행함
@@ -44,22 +45,50 @@ export const createSession = async (
  * [Controller] 특정 그룹의 모든 세션 참가 상태 조회 수행함
  */
 export const checkGroupStatus = async (
-  req: Request,
+  req: AuthedRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const { groupId } = req.params;
 
-    // 해당 그룹 ID를 가진 모든 세션 조회 수행함
-    const sessions = await Session.find({ groupId });
+    if (!req.user?.id) {
+      throw new AppError('인증이 필요합니다.', 401);
+    }
+
+    // 해당 그룹 ID를 가진 모든 세션 조회 수행함 (userId populate)
+    const sessions = await Session.find({ groupId }).populate(
+      'userId',
+      'name email'
+    );
+
+    if (sessions.length === 0) {
+      throw new AppError('해당 그룹을 찾을 수 없습니다.', 404);
+    }
+
+    // 소유권 검증: 요청자가 해당 그룹 세션의 참여자인지 확인함
+    // subject 합류 전(userId=null) 상태에서는 인증된 사용자 접근 허용 (operator 폴링)
+    const hasBindings = sessions.some((s) => s.userId);
+    if (hasBindings) {
+      const isParticipant = sessions.some(
+        (s) => s.userId && s.userId._id?.toString() === req.user!.id
+      );
+      if (!isParticipant) {
+        throw new AppError('해당 그룹에 대한 접근 권한이 없습니다.', 403);
+      }
+    }
 
     // 프론트엔드 위젯 표시를 위한 데이터 가공 수행함
-    const status = sessions.map((s) => ({
-      subjectIndex: s.subjectIndex,
-      status: s.status,
-      guestJoined: s.status === 'PAIRED' || s.status === 'MEASURING',
-    }));
+    const status = sessions.map((s) => {
+      const user = s.userId as any;
+      return {
+        subjectIndex: s.subjectIndex,
+        status: s.status,
+        guestJoined: s.status === 'PAIRED' || s.status === 'MEASURING',
+        userName: user?.name || null,
+        isMe: s.userId?._id?.toString() === req.user!.id,
+      };
+    });
 
     res.status(200).json({
       status: 'success',

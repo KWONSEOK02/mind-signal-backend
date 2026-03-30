@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
 import { chatService } from '../services/chat.service';
+import { AuthedRequest } from '@07-shared/types';
 
-export const handleChat = async (req: Request, res: Response) => {
+export const handleChat = async (req: AuthedRequest, res: Response) => {
   try {
-    const { message } = req.body;
+    const { message, groupId } = req.body;
 
     if (!message) {
       return res.status(400).json({
@@ -13,7 +14,8 @@ export const handleChat = async (req: Request, res: Response) => {
       });
     }
 
-    const result = await chatService.processMessage(message);
+    const userId = req.user?.id;
+    const result = await chatService.processMessage(message, userId, groupId);
     return res.status(200).json(result);
   } catch (error: any) {
     console.error('Chat controller error:', error);

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { handleChat, handleAskChat } from './chat.controller';
+import { optionalAuthenticate } from '@07-shared/middlewares';
 
 const router = Router();
 
@@ -34,7 +35,7 @@ const router = Router();
  *                 url:
  *                   type: string
  */
-router.post('/', handleChat);
+router.post('/', optionalAuthenticate, handleChat);
 
 /**
  * @swagger
