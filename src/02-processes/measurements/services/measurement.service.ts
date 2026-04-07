@@ -96,7 +96,11 @@ export const startMeasurementService = async (sessionId: string) => {
 export const stopMeasurementService = async (
   groupId: string,
   subjectIndex: number,
-  stopReason: 'Natural' | 'ManualEarly' | 'HeadsetLost' | 'ProcessError' = 'Natural'
+  stopReason:
+    | 'Natural'
+    | 'ManualEarly'
+    | 'HeadsetLost'
+    | 'ProcessError' = 'Natural'
 ) => {
   const session = await Session.findOne({ groupId, subjectIndex });
   if (!session) {

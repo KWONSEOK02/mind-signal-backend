@@ -52,9 +52,9 @@ async function triggerPostMeasurementByTier(groupId: string) {
 
   if (tier === 'VALID' && validSessions.length >= 2) {
     // DUAL 분석 실행함
-    mod.runPostMeasurementPipeline(groupId).catch((err) =>
-      console.error('포스트-측정 파이프라인 에러:', err)
-    );
+    mod
+      .runPostMeasurementPipeline(groupId)
+      .catch((err) => console.error('포스트-측정 파이프라인 에러:', err));
   } else {
     // PARTIAL — BTI 폴백 분석 실행함
     const { SocketService } = await import('@07-shared/lib/socket');
@@ -63,9 +63,9 @@ async function triggerPostMeasurementByTier(groupId: string) {
       tier: 'PARTIAL',
       message: '한 명의 데이터로 BTI 개인 분석을 진행합니다.',
     });
-    mod.runBTIAnalysisPipeline(groupId).catch((err) =>
-      console.error('BTI 폴백 파이프라인 에러:', err)
-    );
+    mod
+      .runBTIAnalysisPipeline(groupId)
+      .catch((err) => console.error('BTI 폴백 파이프라인 에러:', err));
   }
 }
 
