@@ -19,6 +19,8 @@ export interface Session {
   pairedAt: Date | null; // 페어링 완료 시점
   expiresAt: Date; // 토큰 만료 시점
   measuredAt: Date | null; // 측정 시작 시점
+  stopReason: 'Natural' | 'ManualEarly' | 'HeadsetLost' | 'ProcessError' | null;
+  measuredDurationSeconds: number | null;
 }
 
 /** 2. 인스턴스 메서드 타입 정의 */
@@ -82,6 +84,15 @@ const sessionSchema = new Schema<Session, SessionModel, SessionMethods>(
     },
     measuredAt: {
       type: Date,
+      default: null,
+    },
+    stopReason: {
+      type: String,
+      enum: ['Natural', 'ManualEarly', 'HeadsetLost', 'ProcessError', null],
+      default: null,
+    },
+    measuredDurationSeconds: {
+      type: Number,
       default: null,
     },
   },
