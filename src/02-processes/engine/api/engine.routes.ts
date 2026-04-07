@@ -313,6 +313,10 @@ router.post(
 const streamStopSchema = z.object({
   groupId: z.string().min(1),
   subjectIndex: z.number().int().nonnegative(),
+  stopReason: z
+    .enum(['Natural', 'ManualEarly', 'HeadsetLost', 'ProcessError'])
+    .optional()
+    .default('Natural'),
 });
 
 /**
@@ -341,6 +345,12 @@ const streamStopSchema = z.object({
  *                 type: integer
  *                 minimum: 0
  *                 example: 1
+ *               stopReason:
+ *                 type: string
+ *                 enum: [Natural, ManualEarly, HeadsetLost, ProcessError]
+ *                 default: Natural
+ *                 description: 종료 사유
+ *                 example: "Natural"
  *     responses:
  *       200:
  *         description: 스트리밍 종료 성공

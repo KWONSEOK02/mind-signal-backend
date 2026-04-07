@@ -55,7 +55,7 @@ export const engineController = {
   /** EEG 스트리밍 종료 요청을 파이썬 엔진으로 프록시 + 세션 COMPLETED 전이함 */
   streamStop: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { groupId, subjectIndex } = req.body;
+      const { groupId, subjectIndex, stopReason } = req.body;
 
       // 1. 엔진에 스트리밍 종료 요청함
       const engineResult = await engineProxyService.streamStop(
@@ -63,10 +63,11 @@ export const engineController = {
         subjectIndex
       );
 
-      // 2. 세션 COMPLETED 전이 + Redis 구독 해제함
+      // 2. 세션 COMPLETED 전이 + Redis 구독 해제 + stopReason 기록함
       const { allCompleted } = await stopMeasurementService(
         groupId,
-        subjectIndex
+        subjectIndex,
+        stopReason ?? 'Natural'
       );
 
       // 3. 모든 subject 완료 시 포스트-측정 오케스트레이션 트리거함
