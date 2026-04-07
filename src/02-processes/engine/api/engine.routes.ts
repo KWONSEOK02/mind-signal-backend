@@ -373,4 +373,64 @@ router.post(
   engineController.streamStop
 );
 
+const stopAllSchema = z.object({
+  groupId: z.string().min(1),
+  stopReason: z
+    .enum(['Natural', 'ManualEarly', 'HeadsetLost', 'ProcessError'])
+    .optional()
+    .default('ManualEarly'),
+});
+
+/**
+ * @openapi
+ * /api/engine/stream/stop-all:
+ *   post:
+ *     summary: 그룹 내 모든 EEG 스트리밍 일괄 종료
+ *     description: |
+ *       groupId에 속한 MEASURING 상태의 모든 subject를 순차적으로 종료함.
+ *       조기 종료 버튼 클릭 시 프론트엔드에서 호출함.
+ *     tags: [Engine]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [groupId]
+ *             properties:
+ *               groupId:
+ *                 type: string
+ *                 minLength: 1
+ *                 example: "grp_abc123"
+ *               stopReason:
+ *                 type: string
+ *                 enum: [Natural, ManualEarly, HeadsetLost, ProcessError]
+ *                 default: ManualEarly
+ *                 description: 종료 사유
+ *                 example: "ManualEarly"
+ *     responses:
+ *       200:
+ *         description: 일괄 종료 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: "success" }
+ *                 stoppedCount: { type: integer, example: 2 }
+ *                 allCompleted: { type: boolean, example: true }
+ *       404:
+ *         description: MEASURING 상태의 세션 없음
+ *       503:
+ *         description: 파이썬 엔진 미등록
+ */
+router.post(
+  '/stream/stop-all',
+  authenticate,
+  validate(stopAllSchema),
+  engineController.stopAll
+);
+
 export default router;
