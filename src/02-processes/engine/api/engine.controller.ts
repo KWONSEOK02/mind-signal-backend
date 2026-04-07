@@ -3,6 +3,7 @@ import { engineRegistryService } from '../services/engine-registry.service';
 import { engineProxyService } from '../services/engine-proxy.service';
 import { stopMeasurementService } from '@02-processes/measurements/services/measurement.service';
 import { AppError } from '@07-shared/errors';
+import { SocketService } from '@07-shared/lib/socket';
 
 /** 최소 분석 가능 시간 (초) — 교수 확인 후 확정 예정 (임시 180초) */
 const MIN_ANALYSIS_SECONDS = 180;
@@ -39,7 +40,6 @@ async function triggerPostMeasurementByTier(groupId: string) {
 
   if (tier === 'ABORTED') {
     // 양쪽 모두 데이터 부족 — 분석 불가, Socket.io로 ABORTED 알림함
-    const { SocketService } = await import('@07-shared/lib/socket');
     SocketService.emitLiveEvent('analysis-status', {
       groupId,
       tier: 'ABORTED',
@@ -50,14 +50,13 @@ async function triggerPostMeasurementByTier(groupId: string) {
 
   const mod = await import('@02-processes/post-measurement');
 
-  if (tier === 'VALID' && validSessions.length >= 2) {
+  if (tier === 'VALID') {
     // DUAL 분석 실행함
     mod
       .runPostMeasurementPipeline(groupId)
       .catch((err) => console.error('포스트-측정 파이프라인 에러:', err));
   } else {
     // PARTIAL — BTI 폴백 분석 실행함
-    const { SocketService } = await import('@07-shared/lib/socket');
     SocketService.emitLiveEvent('analysis-status', {
       groupId,
       tier: 'PARTIAL',
@@ -166,7 +165,6 @@ export const engineController = {
       }
 
       // 각 subject를 순차적으로 종료함
-      let lastAllCompleted = false;
       for (const session of measuringSessions) {
         if (session.subjectIndex === null) continue;
 
@@ -179,16 +177,19 @@ export const engineController = {
           );
         }
 
-        const { allCompleted } = await stopMeasurementService(
+        await stopMeasurementService(
           groupId,
           session.subjectIndex,
           stopReason ?? 'ManualEarly'
         );
-        lastAllCompleted = allCompleted;
       }
 
+      // 루프 후 순서 무관하게 전체 완료 여부 독립 확인함
+      const allSessions = await SessionModel.find({ groupId });
+      const allCompleted = allSessions.every((s) => s.status === 'COMPLETED');
+
       // 모든 subject 완료 시 3-tier 분류 후 파이프라인 트리거함
-      if (lastAllCompleted) {
+      if (allCompleted) {
         triggerPostMeasurementByTier(groupId).catch((err) =>
           console.error('3-tier 파이프라인 트리거 에러:', err)
         );
@@ -197,7 +198,7 @@ export const engineController = {
       res.status(200).json({
         status: 'success',
         stoppedCount: measuringSessions.length,
-        allCompleted: lastAllCompleted,
+        allCompleted,
       });
     } catch (error) {
       next(error);
