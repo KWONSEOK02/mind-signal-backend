@@ -95,7 +95,12 @@ export const startMeasurementService = async (sessionId: string) => {
  */
 export const stopMeasurementService = async (
   groupId: string,
-  subjectIndex: number
+  subjectIndex: number,
+  stopReason:
+    | 'Natural'
+    | 'ManualEarly'
+    | 'HeadsetLost'
+    | 'ProcessError' = 'Natural'
 ) => {
   const session = await Session.findOne({ groupId, subjectIndex });
   if (!session) {
@@ -109,8 +114,14 @@ export const stopMeasurementService = async (
     );
   }
 
-  // 세션 상태 COMPLETED 전이함
+  // 세션 상태 COMPLETED 전이 + stopReason + measuredDuration 기록함
   session.status = 'COMPLETED';
+  session.stopReason = stopReason;
+  if (session.measuredAt) {
+    session.measuredDurationSeconds = Math.round(
+      (Date.now() - session.measuredAt.getTime()) / 1000
+    );
+  }
   await session.save();
 
   // Redis 구독자 정리함
@@ -133,6 +144,7 @@ export const stopMeasurementService = async (
     groupId,
     subjectIndex,
     status: 'COMPLETED',
+    stopReason,
   });
 
   // 두 subject 모두 COMPLETED인지 확인함
