@@ -1,0 +1,37 @@
+language: ko-KR
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+      - dev
+  ignore_formatting: true
+  path_instructions:
+    - path: "src/routes/**"
+      instructions: |
+        Controller(라우트) 규칙:
+        - 비즈니스 로직 금지 — Service 위임 필수.
+        - 직접 DB 접근(Mongoose 모델 호출) 금지.
+        - 에러를 조용히 삼키는(catch 후 무시) 패턴 지적.
+    - path: "src/services/**"
+      instructions: |
+        Service 규칙:
+        - Controller를 import하면 위반 (역방향 의존 금지).
+        - 트랜잭션 관리가 필요한 작업은 명시적 에러 핸들링 필수.
+    - path: "src/**/*.ts"
+      instructions: |
+        any 타입 남용 금지. 타입 단언(as any) 지적.
+        환경변수: 시크릿이 코드에 하드코딩된 경우 즉시 지적.
+        JWT 검증 미들웨어 누락 여부 — 민감한 엔드포인트에 인증 체크 필수.
+        포매팅(스타일) 무시 — ESLint/Prettier가 통제함.
+    - path: "src/**/*.test.ts"
+      instructions: |
+        API 엔드포인트당 최소 happy path + 에러 케이스 1개 테스트.
+        테스트 간 상태 격리 (mock 초기화).
+        포매팅 무시.
+chat:
+  auto_reply: true
