@@ -14,6 +14,8 @@ export interface AnalysisResult {
   aiComment: string; // AI 분석 코멘트
   markdown: string; // 엔진 분석 markdown 원문
   pipelineResult: Record<string, unknown>; // analyzePipeline 전체 응답 저장
+  analysis_mode?: 'DUAL' | 'SEQUENTIAL' | 'BTI'; // 실험 모드 (ADR-14-002)
+  similarity_features?: Record<string, unknown>; // 유사도 지표 (ADR-14-009 Mixed type)
 }
 
 export interface AnalysisResultMethods {}
@@ -60,6 +62,17 @@ const analysisResultSchema = new Schema<
     aiComment: { type: String, required: true },
     markdown: { type: String, default: '' },
     pipelineResult: { type: Schema.Types.Mixed, default: {} },
+    analysis_mode: {
+      type: String,
+      enum: ['DUAL', 'SEQUENTIAL', 'BTI'],
+      default: 'DUAL',
+    },
+    similarity_features: {
+      type: Schema.Types.Mixed,
+      required: false,
+      // 예시: { algorithm: "cosine_pearson_faa", similarity_score: 0.73, ... }
+      // ADR-14-009: 새 알고리즘 추가 시 shape 변경 자유, 마이그레이션 불필요
+    },
   },
   {
     timestamps: true,
