@@ -40,6 +40,24 @@ describe('sequential-analysis.service + engine-proxy 통합 구조 검증', () =
     expect(proxySource).toContain('/api/analyze/pipeline');
   });
 
+  it('proxy가 subject_indices를 DE Pydantic PipelineRequest 검증 통과용으로 포함함', () => {
+    // DE PipelineRequest.subject_indices 는 default 없는 필수 필드임
+    // 누락 시 FastAPI가 422 Unprocessable Entity 반환 — SEQUENTIAL 브랜치 실행 전 차단됨
+    expect(proxySource).toContain("'subject_indices'");
+    expect(proxySource).toMatch(
+      /\['subject_indices'\]\s*:\s*\[\s*1\s*,\s*2\s*\]/
+    );
+  });
+
+  it('proxy SEQUENTIAL 블록에 subject_indices 키가 존재함 (부재 감지 테스트)', () => {
+    // analyzeSequentialPipeline 함수 본문에서 subject_indices 키 존재 여부 확인
+    const sequentialBlock = proxySource.slice(
+      proxySource.indexOf('analyzeSequentialPipeline'),
+      proxySource.indexOf('analyzeSequentialPipeline') + 1000
+    );
+    expect(sequentialBlock).toContain('subject_indices');
+  });
+
   it('service가 DE 응답에서 similarity_features를 추출함', () => {
     // camelCase 변환 후 similarityFeatures 키로 접근함 (toCamelCaseKeys)
     expect(serviceSource).toContain('similarityFeatures');

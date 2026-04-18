@@ -123,6 +123,7 @@ export const engineProxyService = {
       },
       body: JSON.stringify({
         ['group_id']: groupId,
+        ['subject_indices']: [1, 2], // DE Pydantic PipelineRequest 필수 필드 — SEQUENTIAL 브랜치는 값을 무시하지만 검증을 통과해야 함
         ['mode']: 'SEQUENTIAL',
         ['algorithm']: algorithm,
       }),
