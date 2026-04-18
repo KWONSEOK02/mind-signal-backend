@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { Schema, model, Model, HydratedDocument, Types } from 'mongoose';
 
 /** 1. 문서 필드 타입 정의 */

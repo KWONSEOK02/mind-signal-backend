@@ -101,10 +101,7 @@ describe('app.router.ts: sequentialRouter 등록 검증', () => {
   let source: string;
 
   beforeAll(() => {
-    const filePath = path.resolve(
-      __dirname,
-      '../../../01-app/app.router.ts'
-    );
+    const filePath = path.resolve(__dirname, '../../../01-app/app.router.ts');
     source = fs.readFileSync(filePath, 'utf-8');
   });
 
@@ -112,7 +109,7 @@ describe('app.router.ts: sequentialRouter 등록 검증', () => {
     expect(source).toContain('sequentialRouter');
   });
 
-  it("/analyze 경로에 sequentialRouter가 등록됨", () => {
+  it('/analyze 경로에 sequentialRouter가 등록됨', () => {
     expect(source).toContain("'/analyze'");
     expect(source).toContain('sequentialRouter');
   });

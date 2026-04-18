@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 /**
  * sequential-analysis.service — 통합 수준 검증 (unit-level, MongoDB 없이)
  *
@@ -23,10 +24,7 @@ describe('sequential-analysis.service + engine-proxy 통합 구조 검증', () =
       'utf-8'
     );
     proxySource = fs.readFileSync(
-      path.resolve(
-        __dirname,
-        '../../engine/services/engine-proxy.service.ts'
-      ),
+      path.resolve(__dirname, '../../engine/services/engine-proxy.service.ts'),
       'utf-8'
     );
   });
@@ -90,7 +88,9 @@ describe('AnalysisResult 스키마: SEQUENTIAL + similarity_features 필드 roun
 
 describe('Zod similarity 스키마: cosine_pearson_faa round-trip 검증', () => {
   it('유효한 cosine_pearson_faa 결과가 Zod 파싱을 통과함', () => {
-    const { cosinePearsonFAASchema } = require('../../../07-shared/schemas/similarity/cosine_pearson_faa.schema');
+    const {
+      cosinePearsonFAASchema,
+    } = require('../../../07-shared/schemas/similarity/cosine_pearson_faa.schema');
     const mockDEResponse = {
       algorithm: 'cosine_pearson_faa',
       similarity_score: 0.73,
@@ -113,12 +113,20 @@ describe('Zod similarity 스키마: cosine_pearson_faa round-trip 검증', () =>
   });
 
   it('Mixed type 중첩 객체가 보존됨 (Zod parse 후 동일 구조)', () => {
-    const { cosinePearsonFAASchema } = require('../../../07-shared/schemas/similarity/cosine_pearson_faa.schema');
+    const {
+      cosinePearsonFAASchema,
+    } = require('../../../07-shared/schemas/similarity/cosine_pearson_faa.schema');
     const nested = {
       algorithm: 'cosine_pearson_faa',
       similarity_score: 0.5,
       overall_cosine: 0.6,
-      band_ratio_diff: { alpha: 0.1, beta: 0.2, delta: 0.0, theta: 0.3, gamma: 0.1 },
+      band_ratio_diff: {
+        alpha: 0.1,
+        beta: 0.2,
+        delta: 0.0,
+        theta: 0.3,
+        gamma: 0.1,
+      },
       faa_absolute_diff: null,
     };
     const result = cosinePearsonFAASchema.safeParse(nested);
@@ -130,7 +138,9 @@ describe('Zod similarity 스키마: cosine_pearson_faa round-trip 검증', () =>
   });
 
   it('DE 500 응답 시나리오: similarity_score 미포함 응답은 Zod 검증 실패함', () => {
-    const { cosinePearsonFAASchema } = require('../../../07-shared/schemas/similarity/cosine_pearson_faa.schema');
+    const {
+      cosinePearsonFAASchema,
+    } = require('../../../07-shared/schemas/similarity/cosine_pearson_faa.schema');
     const errorResponse = {
       error: 'Internal server error',
       detail: 'CSV not found',
@@ -142,19 +152,25 @@ describe('Zod similarity 스키마: cosine_pearson_faa round-trip 검증', () =>
 
 describe('similaritySchemaRegistry: 레지스트리 조회 검증', () => {
   it("'cosine_pearson_faa' 키로 스키마 조회 성공함", () => {
-    const { getSimilaritySchema } = require('../../../07-shared/schemas/similarity/index');
+    const {
+      getSimilaritySchema,
+    } = require('../../../07-shared/schemas/similarity/index');
     const schema = getSimilaritySchema('cosine_pearson_faa');
     expect(schema).toBeDefined();
   });
 
   it("'default' 키로 스키마 조회 성공함", () => {
-    const { getSimilaritySchema } = require('../../../07-shared/schemas/similarity/index');
+    const {
+      getSimilaritySchema,
+    } = require('../../../07-shared/schemas/similarity/index');
     const schema = getSimilaritySchema('default');
     expect(schema).toBeDefined();
   });
 
   it('미등록 알고리즘은 undefined 반환함', () => {
-    const { getSimilaritySchema } = require('../../../07-shared/schemas/similarity/index');
+    const {
+      getSimilaritySchema,
+    } = require('../../../07-shared/schemas/similarity/index');
     const schema = getSimilaritySchema('unknown_algorithm_xyz');
     expect(schema).toBeUndefined();
   });

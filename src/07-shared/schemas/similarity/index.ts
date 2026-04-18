@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 /**
  * Similarity 스키마 레지스트리
  * 팀원이 새 알고리즘 추가 시: 새 스키마 파일 생성 후 이 map에 등록함

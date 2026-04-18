@@ -29,7 +29,8 @@ async function triggerPostMeasurementByTier(groupId: string) {
     SocketService.emitLiveEvent('analysis-status', {
       groupId,
       tier: 'SEQUENTIAL',
-      message: 'SEQUENTIAL 모드 측정 완료. "Analyze" 버튼으로 분석을 시작하세요.',
+      message:
+        'SEQUENTIAL 모드 측정 완료. "Analyze" 버튼으로 분석을 시작하세요.',
     });
     return;
   }

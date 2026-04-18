@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { z } from 'zod';
 import { similarityBaseSchema } from './_base';
 

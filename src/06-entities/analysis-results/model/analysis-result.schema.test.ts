@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 /**
  * analysis-result.schema.ts — analysis_mode + similarity_features 필드 검증
  *
@@ -55,7 +56,9 @@ describe('analysis-result.schema.ts: analysis_mode 필드가 올바르게 추가
     // analysis_mode는 인터페이스에서 optional(?)이거나 Mongoose default로 채워짐
     // 인터페이스 필드에 '?'(optional) 또는 default 선언 확인함
     const hasOptionalInInterface = source.match(/analysis_mode\s*\?:/);
-    const hasDefaultInSchema = source.match(/analysis_mode:[\s\S]*?default:\s*['"]DUAL['"]/);
+    const hasDefaultInSchema = source.match(
+      /analysis_mode:[\s\S]*?default:\s*['"]DUAL['"]/
+    );
     expect(hasOptionalInInterface || hasDefaultInSchema).toBeTruthy();
   });
 });
@@ -70,7 +73,9 @@ describe('cosine_pearson_faa.schema.ts: Zod 스키마 검증', () => {
     );
     const hasFile = fs.existsSync(schemaPath);
     if (hasFile) {
-      ({ cosinePearsonFAASchema } = require('../../../07-shared/schemas/similarity/cosine_pearson_faa.schema'));
+      ({
+        cosinePearsonFAASchema,
+      } = require('../../../07-shared/schemas/similarity/cosine_pearson_faa.schema'));
     }
   });
 
@@ -80,7 +85,13 @@ describe('cosine_pearson_faa.schema.ts: Zod 스키마 검증', () => {
       algorithm: 'cosine_pearson_faa',
       similarity_score: 0.73,
       overall_cosine: 0.85,
-      band_ratio_diff: { delta: 0.1, theta: 0.2, alpha: 0.05, beta: 0.15, gamma: 0.08 },
+      band_ratio_diff: {
+        delta: 0.1,
+        theta: 0.2,
+        alpha: 0.05,
+        beta: 0.15,
+        gamma: 0.08,
+      },
       faa_absolute_diff: 0.2,
     };
     const result = cosinePearsonFAASchema.safeParse(validPayload);

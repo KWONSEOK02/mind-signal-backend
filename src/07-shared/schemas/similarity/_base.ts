@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { z } from 'zod';
 
 /**
@@ -6,7 +7,7 @@ import { z } from 'zod';
  */
 export const similarityBaseSchema = z.object({
   algorithm: z.string(),
-  similarity_score: z.number().min(0).max(1),
+  similarity_score: z.number().min(0).max(1), // DE API snake_case 키 그대로 유지함
 });
 
 export type SimilarityBase = z.infer<typeof similarityBaseSchema>;

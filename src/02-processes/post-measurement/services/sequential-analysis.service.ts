@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { Session } from '@06-entities/sessions';
 import { AnalysisResult } from '@06-entities/analysis-results';
 import { EegRecord } from '@06-entities/eeg-records';
@@ -96,7 +97,9 @@ export const runSequentialAnalysisPipeline = async (
       algorithm
     );
     similarityFeatures = (pipelineResult.similarityFeatures ??
-      pipelineResult.similarity_features) as Record<string, unknown> | undefined;
+      pipelineResult.similarity_features) as
+      | Record<string, unknown>
+      | undefined;
   } catch (err) {
     // EegRecord 롤백 후 에러 전파함
     await EegRecord.findByIdAndDelete(record1._id);
@@ -121,7 +124,7 @@ export const runSequentialAnalysisPipeline = async (
     markdown: (pipelineResult.markdown as string) ?? '',
     pipelineResult,
     analysis_mode: 'SEQUENTIAL',
-    similarity_features: similarityFeatures ?? null,
+    similarity_features: similarityFeatures ?? undefined,
   });
 
   console.log(
