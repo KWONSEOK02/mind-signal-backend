@@ -56,7 +56,7 @@ describe('engine.routes.ts: analyzePipelineSchema Zod 런타임 검증', () => {
     const { z } = require('zod');
     analyzePipelineSchema = z.object({
       groupId: z.string().min(1),
-      subjectIndices: z.array(z.number().int().positive()).optional(),
+      subjectIndices: z.array(z.number().int().positive()),
       mode: z.enum(['DUAL', 'SEQUENTIAL', 'BTI']).optional().default('DUAL'),
       algorithm: z.string().optional().default('default'),
     });
@@ -66,6 +66,7 @@ describe('engine.routes.ts: analyzePipelineSchema Zod 런타임 검증', () => {
     if (!analyzePipelineSchema) return;
     const result = analyzePipelineSchema.safeParse({
       groupId: 'grp_test',
+      subjectIndices: [1, 2],
       mode: 'SEQUENTIAL',
     });
     expect(result.success).toBe(true);
@@ -75,6 +76,7 @@ describe('engine.routes.ts: analyzePipelineSchema Zod 런타임 검증', () => {
     if (!analyzePipelineSchema) return;
     const result = analyzePipelineSchema.safeParse({
       groupId: 'grp_test',
+      subjectIndices: [1, 2],
       mode: 'DUAL',
     });
     expect(result.success).toBe(true);
@@ -84,6 +86,7 @@ describe('engine.routes.ts: analyzePipelineSchema Zod 런타임 검증', () => {
     if (!analyzePipelineSchema) return;
     const result = analyzePipelineSchema.safeParse({
       groupId: 'grp_test',
+      subjectIndices: [1, 2],
       mode: 'BTI',
     });
     expect(result.success).toBe(true);
@@ -93,6 +96,7 @@ describe('engine.routes.ts: analyzePipelineSchema Zod 런타임 검증', () => {
     if (!analyzePipelineSchema) return;
     const result = analyzePipelineSchema.safeParse({
       groupId: 'grp_test',
+      subjectIndices: [1, 2],
       mode: 'INVALID',
     });
     expect(result.success).toBe(false);
@@ -100,7 +104,10 @@ describe('engine.routes.ts: analyzePipelineSchema Zod 런타임 검증', () => {
 
   it('mode 미지정 시 default DUAL이 적용됨', () => {
     if (!analyzePipelineSchema) return;
-    const result = analyzePipelineSchema.safeParse({ groupId: 'grp_test' });
+    const result = analyzePipelineSchema.safeParse({
+      groupId: 'grp_test',
+      subjectIndices: [1, 2],
+    });
     expect(result.success).toBe(true);
     if (result.success) {
       expect((result.data as any).mode).toBe('DUAL');

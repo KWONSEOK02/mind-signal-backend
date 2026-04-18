@@ -77,7 +77,7 @@ router.post('/register', validate(registerSchema), engineController.register);
 // 전체 파이프라인 분석 프록시
 const analyzePipelineSchema = z.object({
   groupId: z.string().min(1),
-  subjectIndices: z.array(z.number().int().positive()).optional(),
+  subjectIndices: z.array(z.number().int().positive()),
   mode: z.enum(['DUAL', 'SEQUENTIAL', 'BTI']).optional().default('DUAL'),
   algorithm: z.string().optional().default('default'),
   params: z
