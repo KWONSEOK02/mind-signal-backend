@@ -1,4 +1,5 @@
 import { Schema, model, Model, HydratedDocument, Types } from 'mongoose';
+import { ExperimentMode } from '@07-shared/constants/experiment';
 
 /** * 1. 문서 필드 타입 정의
  * ERD의 필드와 Note A 규칙을 반영함
@@ -21,6 +22,7 @@ export interface Session {
   measuredAt: Date | null; // 측정 시작 시점
   stopReason: 'Natural' | 'ManualEarly' | 'HeadsetLost' | 'ProcessError' | null;
   measuredDurationSeconds: number | null;
+  experimentMode: ExperimentMode; // 실험 모드 (DUAL | SEQUENTIAL | BTI)
 }
 
 /** 2. 인스턴스 메서드 타입 정의 */
@@ -94,6 +96,12 @@ const sessionSchema = new Schema<Session, SessionModel, SessionMethods>(
     measuredDurationSeconds: {
       type: Number,
       default: null,
+    },
+    experimentMode: {
+      type: String,
+      enum: ['DUAL', 'SEQUENTIAL', 'BTI'],
+      required: true,
+      default: 'DUAL',
     },
   },
   {
