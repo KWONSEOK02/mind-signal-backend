@@ -5,6 +5,7 @@ import { Consent } from '@06-entities/consents';
 import { engineProxyService } from '@02-processes/engine/services/engine-proxy.service';
 import { AppError } from '@07-shared/errors';
 import type { AnalysisResultDoc } from '@06-entities/analysis-results';
+import type { EegRecordDoc } from '@06-entities/eeg-records';
 
 /**
  * SEQUENTIAL 모드 분석 파이프라인 수행함
@@ -88,8 +89,8 @@ export const runSequentialAnalysisPipeline = async (
   // EegRecord 생성 후 이후 단계 실패 시 롤백 필요함 — try 블록 내에서 통합 처리함
   let pipelineResult: Record<string, unknown> = {};
   let similarityFeatures: Record<string, unknown> | undefined;
-  let record1: Awaited<ReturnType<typeof EegRecord.create>> | undefined;
-  let record2: Awaited<ReturnType<typeof EegRecord.create>> | undefined;
+  let record1: EegRecordDoc | undefined;
+  let record2: EegRecordDoc | undefined;
 
   try {
     record1 = await EegRecord.create(record1Doc);
