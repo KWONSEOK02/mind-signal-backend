@@ -72,11 +72,11 @@ describe('cosine_pearson_faa.schema.ts: Zod 스키마 검증', () => {
       '../../../07-shared/schemas/similarity/cosine_pearson_faa.schema.ts'
     );
     const hasFile = fs.existsSync(schemaPath);
-    if (hasFile) {
-      ({
-        cosinePearsonFAASchema,
-      } = require('../../../07-shared/schemas/similarity/cosine_pearson_faa.schema'));
-    }
+    expect(hasFile).toBe(true);
+    if (!hasFile) return;
+    ({
+      cosinePearsonFAASchema,
+    } = require('../../../07-shared/schemas/similarity/cosine_pearson_faa.schema'));
   });
 
   it('유효한 payload를 올바르게 파싱함', () => {
