@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import * as sessionsController from './session.controller';
 import { authenticate } from '@07-shared/middlewares'; // 인증 미들웨어
+import { validate } from '@07-shared/middlewares/validate.middleware'; // Zod body 검증 미들웨어
+import { createSessionSchema } from './session.schema'; // 세션 생성 스키마
 
 const router = Router();
 
@@ -95,7 +97,12 @@ const router = Router();
  *                 message: { type: string, example: "subjectIndex 할당에 실패했습니다." }
  */
 
-router.post('/', authenticate, sessionsController.createSession);
+router.post(
+  '/',
+  authenticate,
+  validate(createSessionSchema), // 선택적 body 검증 — body 누락 시 {} 대체 처리함
+  sessionsController.createSession
+);
 
 /**
  * @openapi
