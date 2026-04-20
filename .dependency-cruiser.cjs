@@ -1,11 +1,15 @@
 /** @type {import('dependency-cruiser').IConfiguration} */
+// advisory 기간(D+14): DEPCRUISE_BLOCKING=true 시 'error', 미설정 시 'warn'으로 동작함
+const fsdBoundarySeverity =
+  process.env.DEPCRUISE_BLOCKING === 'true' ? 'error' : 'warn';
+
 module.exports = {
   forbidden: [
     // (a) no-mongoose-in-features — 05-features 직접 mongoose/mongodb import 금지
     {
       name: 'no-mongoose-in-features',
       comment: 'Feature code must not import DB drivers directly — use 06-entities layer',
-      severity: 'error',
+      severity: fsdBoundarySeverity,
       from: { path: '^src/05-features' },
       to: { path: '^(mongoose|mongodb)$' },
     },
@@ -14,7 +18,7 @@ module.exports = {
     {
       name: 'no-mongoose-direct-in-processes',
       comment: 'Process orchestration must access DB via 06-entities, not mongoose directly',
-      severity: 'error',
+      severity: fsdBoundarySeverity,
       from: { path: '^src/02-processes' },
       to: { path: '^(mongoose|mongodb)$' },
     },

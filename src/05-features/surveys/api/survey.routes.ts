@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import * as surveyController from './survey.controller';
-import { authenticate } from '@07-shared/middlewares';
-import { validate } from '@07-shared/middlewares/validate.middleware';
+import { authenticate, validate } from '@07-shared/middlewares';
 import { submitResponsesSchema } from './survey.schema';
 
 const router = Router();
@@ -96,8 +95,11 @@ router.get('/questions', surveyController.getQuestions);
  *                     answerValue:
  *                       oneOf:
  *                         - type: string
- *                         - type: integer
- *                       description: 설문 유형에 따라 텍스트(string) 또는 척도(integer)
+ *                         - type: number
+ *                         - type: array
+ *                           items:
+ *                             type: string
+ *                       description: 설문 유형에 따라 텍스트(string), 척도(number), 복수 선택(string[])
  *                       example: 4
  *     responses:
  *       201:

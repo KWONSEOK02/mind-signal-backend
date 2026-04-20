@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import * as sessionsController from './session.controller';
-import { authenticate } from '@07-shared/middlewares'; // 인증 미들웨어
-import { validate } from '@07-shared/middlewares/validate.middleware'; // Zod body 검증 미들웨어
+import { authenticate, validate } from '@07-shared/middlewares'; // 인증 및 Zod body 검증 미들웨어
 import { createSessionSchema } from './session.schema'; // 세션 생성 스키마
 
 const router = Router();

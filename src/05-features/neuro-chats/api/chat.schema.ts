@@ -11,7 +11,7 @@ export const chatMessageSchema = z.object({
 
 // 실제 shape: chat.controller.ts 32행 확인 — { message, email }
 export const chatAskSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   message: z.string().min(1).max(2000),
 });
 

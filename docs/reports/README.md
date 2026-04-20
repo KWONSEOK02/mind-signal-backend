@@ -83,8 +83,11 @@ PAAR는 **사후(reactive)** 보고서임. 나머지 세 가지(spike / benchmar
 ```bash
 # 예: 스파이크 테스트 보고서 시작 시
 # (BE 레포 루트에서 실행함)
-cp ../templates-review/typescript-template/docs/reports/_spike-test-template.md \
+cp docs/reports/_spike-test-template.md \
    docs/reports/spike-test-$(date +%Y-%m-%d)-<slug>.md
 ```
 
-> 템플릿 원본 위치: `Team-project/templates-review/typescript-template/docs/reports/_*.md`
+> 템플릿 원본 위치: `docs/reports/_*.md`
+>
+> 참고: 워크스페이스 전체 템플릿 원본은
+> `Team-project/templates-review/typescript-template/docs/reports/_*.md`에도 있음

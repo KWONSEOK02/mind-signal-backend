@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { handleChat, handleAskChat } from './chat.controller';
-import { optionalAuthenticate } from '@07-shared/middlewares';
-import { validate } from '@07-shared/middlewares/validate.middleware';
+import { optionalAuthenticate, validate } from '@07-shared/middlewares';
 import { chatMessageSchema, chatAskSchema } from './chat.schema';
 
 const router = Router();

@@ -2,7 +2,7 @@
 
 <!-- ⚠️ 이 파일을 수정하지 말 것. 복제하여 ADR-NNN-<slug>.md로 저장할 것.
      언더스코어(_) 제거 후 사용함. Draft PR을 열고 Status: Proposed로 시작함.
-     main 머지 시 Status가 Accepted로 전환되며 이 파일은 append-only가 됨.
+     대상 기본 브랜치(main/dev 등) 머지 시 Status가 Accepted로 전환되며 이 파일은 append-only가 됨.
      (documentation.md § Append-only rule 참조) -->
 
 ---

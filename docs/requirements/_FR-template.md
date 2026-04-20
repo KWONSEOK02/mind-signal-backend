@@ -67,7 +67,7 @@ As a **<actor>** (예: Operator, Subject), I want **<capability>**, so that **<o
 **구조화된 영어**로 흐름을 기술함 (`IF … THEN … ELSE`, `FOR EACH`, `WHILE`, `RETURN`).
 자연어 모호성 없이 기술함. LLM이 이 명세에서 컴파일 가능한 함수를 생성할 수 있어야 함.
 
-```
+```text
 BEGIN FR-XX
   VALIDATE input via XxxSchema.parse (실패 시 400 반환)
   FETCH resource BY id
