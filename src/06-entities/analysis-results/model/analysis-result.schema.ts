@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 import { Schema, model, Model, HydratedDocument, Types } from 'mongoose';
 
 /** 1. 문서 필드 타입 정의 */
@@ -63,11 +62,13 @@ const analysisResultSchema = new Schema<
     aiComment: { type: String, required: true },
     markdown: { type: String, default: '' },
     pipelineResult: { type: Schema.Types.Mixed, default: {} },
+    // eslint-disable-next-line camelcase
     analysis_mode: {
       type: String,
       enum: ['DUAL', 'SEQUENTIAL', 'BTI'],
       default: 'DUAL',
     },
+    // eslint-disable-next-line camelcase
     similarity_features: {
       type: Schema.Types.Mixed,
       required: false,
