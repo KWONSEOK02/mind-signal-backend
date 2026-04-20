@@ -18,7 +18,12 @@
     "infra:up": "docker-compose up -d",
     "infra:down": "docker-compose down",
     "test:redis": "docker exec -it mind-signal-redis redis-cli psubscribe mind-signal:*",
-    "data:run": "cd ../mind-signal-data-engine && python -m core.streamer"
+    "data:run": "cd ../mind-signal-data-engine && python -m core.streamer",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "depcruise": "depcruise src --config .dependency-cruiser.cjs",
+    "verify": "npm run format:check && npm run typecheck && npm run depcruise && npm run lint && npm run test && npm run build",
+    "commitlint": "commitlint --from=HEAD~1 --to=HEAD --verbose"
   },
   "description": "Mind Signal Project Backend",
   "dependencies": {
@@ -43,6 +48,8 @@
     "zod": "^4.3.4"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
     "@faker-js/faker": "^10.1.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
@@ -56,6 +63,7 @@
     "@types/swagger-ui-express": "^4.1.8",
     "@typescript-eslint/eslint-plugin": "^8.51.0",
     "@typescript-eslint/parser": "^8.51.0",
+    "dependency-cruiser": "^17.3.10",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
