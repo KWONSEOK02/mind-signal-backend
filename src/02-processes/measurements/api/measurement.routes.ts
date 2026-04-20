@@ -1,7 +1,8 @@
 // src/02-processes/measurement/api/measurement.routes.ts
 import { Router } from 'express';
 import measurementController from './measurement.controller';
-import { authenticate } from '@07-shared/middlewares';
+import { authenticate, validateParams } from '@07-shared/middlewares';
+import { measurementStartParamsSchema } from './measurement.schema';
 
 const router = Router();
 
@@ -99,6 +100,7 @@ const router = Router();
 router.post(
   '/sessions/:sessionId/eeg/stream:start',
   authenticate,
+  validateParams(measurementStartParamsSchema),
   measurementController.startStreaming
 );
 
