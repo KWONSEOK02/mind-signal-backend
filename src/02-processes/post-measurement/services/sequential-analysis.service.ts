@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 import { Session } from '@06-entities/sessions';
 import { AnalysisResult } from '@06-entities/analysis-results';
 import { EegRecord } from '@06-entities/eeg-records';
@@ -19,6 +18,7 @@ export const runSequentialAnalysisPipeline = async (
   // 멱등성 가드: 이미 SEQUENTIAL 결과가 있으면 스킵함
   const existing = await AnalysisResult.findOne({
     groupId,
+    // eslint-disable-next-line camelcase
     analysis_mode: 'SEQUENTIAL',
   });
   if (existing) {
@@ -64,7 +64,7 @@ export const runSequentialAnalysisPipeline = async (
   const user1Id = (session1.userId as any)._id;
   const user2Id = (session2.userId as any)._id;
 
-  // EegRecord 2건 생성함
+  // EegRecord 문서 초기화 (실제 create는 try 블록 내에서 수행함)
   const consent1 = await Consent.findOne({ userId: user1Id });
   const consent2 = await Consent.findOne({ userId: user2Id });
 
@@ -84,14 +84,17 @@ export const runSequentialAnalysisPipeline = async (
   };
   if (consent2?._id) record2Doc.consentId = consent2._id;
 
-  const record1 = await EegRecord.create(record1Doc);
-  const record2 = await EegRecord.create(record2Doc);
-
-  // DE /analyze/pipeline (mode=SEQUENTIAL) 호출함
+  // DE /analyze/pipeline (mode=SEQUENTIAL) 호출 + AnalysisResult 생성함
+  // EegRecord 생성 후 이후 단계 실패 시 롤백 필요함 — try 블록 내에서 통합 처리함
   let pipelineResult: Record<string, unknown> = {};
   let similarityFeatures: Record<string, unknown> | undefined;
+  let record1: Awaited<ReturnType<typeof EegRecord.create>> | undefined;
+  let record2: Awaited<ReturnType<typeof EegRecord.create>> | undefined;
 
   try {
+    record1 = await EegRecord.create(record1Doc);
+    record2 = await EegRecord.create(record2Doc);
+
     pipelineResult = await engineProxyService.analyzeSequentialPipeline(
       groupId,
       algorithm
@@ -100,36 +103,40 @@ export const runSequentialAnalysisPipeline = async (
       pipelineResult.similarity_features) as
       | Record<string, unknown>
       | undefined;
+
+    // AnalysisResult 생성함 (analysis_mode: SEQUENTIAL)
+    const analysisResult = await AnalysisResult.create({
+      groupId,
+      user1Id,
+      user2Id,
+      record1Id: record1._id,
+      record2Id: record2._id,
+      surveySummary: '',
+      matchingScore:
+        typeof similarityFeatures?.similarity_score === 'number'
+          ? Math.round(similarityFeatures.similarity_score * 100)
+          : 0,
+      synchronyScore: null, // SEQUENTIAL 모드에서 PLV/coherence 미계산 (ADR-14-004)
+      yScore: null,
+      aiComment: '뇌파 반응 유사도 분석이 완료되었습니다.',
+      markdown: (pipelineResult.markdown as string) ?? '',
+      pipelineResult,
+      // eslint-disable-next-line camelcase
+      analysis_mode: 'SEQUENTIAL',
+      // eslint-disable-next-line camelcase
+      similarity_features: similarityFeatures ?? undefined,
+    });
+
+    console.log(
+      `[sequentialAnalysis] groupId=${groupId} SEQUENTIAL 분석 완료, algorithm=${algorithm}`
+    );
+
+    return analysisResult;
   } catch (err) {
     // EegRecord 롤백 후 에러 전파함
-    await EegRecord.findByIdAndDelete(record1._id);
-    await EegRecord.findByIdAndDelete(record2._id);
+    await EegRecord.deleteMany({
+      _id: { $in: [record1?._id, record2?._id].filter(Boolean) },
+    });
     throw err;
   }
-
-  // AnalysisResult 생성함 (analysis_mode: SEQUENTIAL)
-  const analysisResult = await AnalysisResult.create({
-    groupId,
-    user1Id,
-    user2Id,
-    record1Id: record1._id,
-    record2Id: record2._id,
-    surveySummary: '',
-    matchingScore: similarityFeatures?.similarity_score
-      ? Math.round((similarityFeatures.similarity_score as number) * 100)
-      : 0,
-    synchronyScore: null, // SEQUENTIAL 모드에서 PLV/coherence 미계산 (ADR-14-004)
-    yScore: null,
-    aiComment: '뇌파 반응 유사도 분석이 완료되었습니다.',
-    markdown: (pipelineResult.markdown as string) ?? '',
-    pipelineResult,
-    analysis_mode: 'SEQUENTIAL',
-    similarity_features: similarityFeatures ?? undefined,
-  });
-
-  console.log(
-    `[sequentialAnalysis] groupId=${groupId} SEQUENTIAL 분석 완료, algorithm=${algorithm}`
-  );
-
-  return analysisResult;
 };

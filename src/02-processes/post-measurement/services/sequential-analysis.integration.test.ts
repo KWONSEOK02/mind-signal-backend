@@ -71,7 +71,7 @@ describe('sequential-analysis.service + engine-proxy 통합 구조 검증', () =
   });
 
   it('service가 엔진 실패 시 EegRecord 롤백 후 에러를 전파함', () => {
-    expect(serviceSource).toContain('findByIdAndDelete');
+    expect(serviceSource).toContain('deleteMany');
     expect(serviceSource).toContain('throw err');
   });
 });

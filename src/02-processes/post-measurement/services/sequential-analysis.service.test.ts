@@ -41,7 +41,7 @@ describe('sequential-analysis.service.ts: 소스 정적 검증', () => {
   });
 
   it('엔진 실패 시 EegRecord 롤백 후 에러를 전파함', () => {
-    expect(source).toContain('findByIdAndDelete');
+    expect(source).toContain('deleteMany');
     expect(source).toContain('throw err');
   });
 
