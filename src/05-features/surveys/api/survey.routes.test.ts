@@ -68,9 +68,14 @@ describe('submitResponsesSchema 검증', () => {
 
   it('answerValue 누락 시 검증 실패함', () => {
     const result = submitResponsesSchema.safeParse({
-      responses: [{ questionId: 'q1' }],
+      responses: [{ questionId: '60d5f4831a2b3c4d5e6f7890' }],
     });
     expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((i) => i.path.includes('answerValue'))
+      ).toBe(true);
+    }
   });
 
   it('questionId 빈 문자열이면 검증 실패함', () => {
@@ -82,7 +87,12 @@ describe('submitResponsesSchema 검증', () => {
 
   it('answerValue가 객체이면 검증 실패함', () => {
     const result = submitResponsesSchema.safeParse({
-      responses: [{ questionId: 'q1', answerValue: { nested: 'object' } }],
+      responses: [
+        {
+          questionId: '60d5f4831a2b3c4d5e6f7890',
+          answerValue: { nested: 'object' },
+        },
+      ],
     });
     expect(result.success).toBe(false);
   });

@@ -1,13 +1,39 @@
 /**
- * chat.routes.ts — validate 미들웨어 Zod 스키마 검증
+ * chat.routes.ts — validate 미들웨어 Zod 스키마 검증 + 라우트 통합 테스트
  *
  * 검증 항목:
  *   - chatMessageSchema: message 필수, groupId 선택(ObjectId 정규식)
  *   - chatAskSchema: email 형식, message 필수
  *   - 유효하지 않은 입력 시 safeParse 실패함
+ *   - validate 미들웨어가 POST / 및 POST /ask 라우트에 실제로 연결됨
  */
 
+import express from 'express';
+import request from 'supertest';
 import { chatMessageSchema, chatAskSchema } from './chat.schema';
+import { optionalAuthenticate, validate } from '@07-shared/middlewares';
+import { handleChat, handleAskChat } from './chat.controller';
+
+// chatService 모킹 — 외부 인프라(Gemini, MongoDB, SMTP) 의존 제거
+jest.mock('../services/chat.service', () => ({
+  chatService: {
+    processMessage: jest
+      .fn()
+      .mockResolvedValue({ status: 'success', message: 'ok', url: '' }),
+    sendInquiryEmail: jest
+      .fn()
+      .mockResolvedValue({ status: 'success', message: 'sent' }),
+  },
+}));
+
+// 라우트 통합 테스트용 경량 Express 앱 생성
+function buildChatApp() {
+  const app = express();
+  app.use(express.json());
+  app.post('/', optionalAuthenticate, validate(chatMessageSchema), handleChat);
+  app.post('/ask', validate(chatAskSchema), handleAskChat);
+  return app;
+}
 
 describe('chatMessageSchema 검증', () => {
   it('message 있으면 검증 통과함', () => {
@@ -90,5 +116,39 @@ describe('chatAskSchema 검증', () => {
   it('message 누락 시 검증 실패함', () => {
     const result = chatAskSchema.safeParse({ email: 'user@example.com' });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('POST / — validate 미들웨어 라우트 통합', () => {
+  const app = buildChatApp();
+
+  it('유효한 message 전송 시 200 반환함', async () => {
+    const res = await request(app)
+      .post('/')
+      .send({ message: '소개 어디서 봐요?' });
+    expect(res.status).toBe(200);
+  });
+
+  it('message 누락 시 400 반환함 (validate 미들웨어 체인 확인)', async () => {
+    const res = await request(app).post('/').send({});
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /ask — validate 미들웨어 라우트 통합', () => {
+  const app = buildChatApp();
+
+  it('유효한 email, message 전송 시 200 반환함', async () => {
+    const res = await request(app)
+      .post('/ask')
+      .send({ email: 'user@example.com', message: '문의드립니다.' });
+    expect(res.status).toBe(200);
+  });
+
+  it('email 누락 시 400 반환함 (validate 미들웨어 체인 확인)', async () => {
+    const res = await request(app)
+      .post('/ask')
+      .send({ message: '문의드립니다.' });
+    expect(res.status).toBe(400);
   });
 });
