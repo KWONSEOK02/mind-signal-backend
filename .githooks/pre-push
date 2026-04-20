@@ -19,8 +19,8 @@ if [ -n "$INVALID" ]; then
   exit 1
 fi
 
-# Gate 3: uncommitted 변경 없음 확인
-if ! git diff-index --quiet HEAD --; then
+# Gate 3: uncommitted 변경 없음 확인 (untracked 파일 포함)
+if [ -n "$(git status --porcelain)" ]; then
   echo "BLOCKED: uncommitted changes exist. Commit or stash before pushing."
   exit 1
 fi
