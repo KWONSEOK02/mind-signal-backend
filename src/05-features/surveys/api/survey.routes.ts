@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import * as surveyController from './survey.controller';
 import { authenticate } from '@07-shared/middlewares';
+import { validate } from '@07-shared/middlewares/validate.middleware';
+import { submitResponsesSchema } from './survey.schema';
 
 const router = Router();
 
@@ -143,7 +145,12 @@ router.get('/questions', surveyController.getQuestions);
  */
 
 //설문조사 응답 제출
-router.post('/responses', authenticate, surveyController.submitResponses);
+router.post(
+  '/responses',
+  authenticate,
+  validate(submitResponsesSchema),
+  surveyController.submitResponses
+);
 
 /**
  * @openapi
