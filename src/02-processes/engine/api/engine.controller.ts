@@ -19,9 +19,11 @@ async function triggerPostMeasurementByTier(groupId: string) {
   const { Session: SessionModel } = await import('@06-entities/sessions');
 
   // SEQUENTIAL 모드 조기 분기: 자동 분석 트리거 안 함 (I2 + N1)
-  const representativeSession = await SessionModel.findOne({ groupId }).sort({
-    subjectIndex: 1,
-  });
+  // subjectIndex: { $ne: null } 필터로 null 세션이 대표 세션으로 선택되는 경우 방지함
+  const representativeSession = await SessionModel.findOne({
+    groupId,
+    subjectIndex: { $ne: null },
+  }).sort({ subjectIndex: 1 });
   const experimentMode = representativeSession?.experimentMode ?? 'DUAL';
 
   if (experimentMode === 'SEQUENTIAL') {

@@ -76,8 +76,8 @@ describe('sequential.routes.ts: POST /sequential 라우트 정적 검증', () =>
     expect(source).toContain('groupId');
   });
 
-  it('algorithm 필드가 optional로 처리됨', () => {
-    expect(source).toContain('optional');
+  it("algorithm 필드가 Zod default('default')로 처리됨", () => {
+    expect(source).toContain("default('default')");
   });
 
   it('creatorId 소유권 검증 로직이 존재함', () => {

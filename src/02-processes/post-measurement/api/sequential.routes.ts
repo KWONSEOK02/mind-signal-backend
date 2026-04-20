@@ -12,7 +12,7 @@ const router = Router();
 /** POST /sequential 요청 body 검증 스키마 */
 const sequentialAnalyzeSchema = z.object({
   groupId: z.string().min(1),
-  algorithm: z.string().optional(),
+  algorithm: z.string().default('default'),
 });
 
 /**
@@ -30,25 +30,21 @@ router.post(
       const requesterId = req.user?.id;
 
       // 소유권 검증: groupId의 세션 생성자만 분석 가능함
-      const session = await Session.findOne({ groupId }).sort({
-        subjectIndex: 1,
-      });
+      // subjectIndex: { $ne: null } 필터로 null 세션이 대표 세션으로 선택되는 경우 방지함
+      const session = await Session.findOne({
+        groupId,
+        subjectIndex: { $ne: null },
+      }).sort({ subjectIndex: 1 });
 
       if (!session) {
         throw new AppError(`groupId=${groupId} 세션을 찾을 수 없습니다.`, 404);
       }
 
-      if (
-        session.creatorId === null ||
-        session.creatorId.toString() !== requesterId
-      ) {
+      if (!session.creatorId || !session.creatorId.equals(requesterId!)) {
         throw new AppError('이 세션에 대한 분석 권한이 없습니다.', 403);
       }
 
-      const result = await runSequentialAnalysisPipeline(
-        groupId,
-        algorithm ?? 'default'
-      );
+      const result = await runSequentialAnalysisPipeline(groupId, algorithm);
 
       res.status(200).json({ success: true, result });
     } catch (error) {
