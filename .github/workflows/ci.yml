@@ -3,7 +3,7 @@ name: CI Workflow
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ main, dev, 'feat/**', 'fix/**', 'docs/**', 'refactor/**' ]
   pull_request:
     branches: [ main, dev ]
 
@@ -25,16 +25,25 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
         # 프로젝트 의존성 패키지 설치함
+
+      - name: Check Format
+        run: npm run format:check
+        # Prettier 포맷 규칙 준수 여부 검사함
+
+      - name: Type check
+        run: npm run typecheck
+        # TypeScript 타입 오류 조기 발견함
+
+      - name: Architecture check (depcruise)
+        run: npm run depcruise
+        continue-on-error: true
+        # FSD 레이어 경계 위반 감지함 (advisory — ADR-005)
 
       - name: Run Lint
         run: npm run lint
         # ESLint를 통한 정적 코드 분석 수행함
-
-      - name: Check Format
-        run: npx prettier --check "src/**/*.ts"
-        # Prettier 포맷 규칙 준수 여부 검사함 (npm run format은 --write라 CI에서 직접 사용 불가)
 
       - name: Run Tests
         run: npm run test
