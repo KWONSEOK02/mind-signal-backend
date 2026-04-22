@@ -9,14 +9,23 @@ if [ "$CURRENT_BRANCH" = "main" ]; then
   exit 1
 fi
 
-# Gate 2: 마지막 10 커밋 메시지 Conventional Commits 형식 검증
+# Gate 2: push 대상 신규 커밋만 Conventional Commits 형식 검증 (origin/dev..HEAD 범위)
+# 과거 dev 히스토리는 체크에서 제외함 — origin/dev 없으면 fallback으로 최근 10개
 PATTERN='^(feat|fix|docs|chore|refactor|test|ci|revert|perf|style)(\(.+\))?!?: .+$'
-INVALID=$(git log --format=%s -10 --no-merges | grep -vE "$PATTERN" || true)
-if [ -n "$INVALID" ]; then
-  echo "BLOCKED: commit message convention violation:"
-  echo "$INVALID"
-  echo "Fix: git reset --soft HEAD~N and rewrite commits. DO NOT force push."
-  exit 1
+if git rev-parse --verify origin/dev >/dev/null 2>&1; then
+  SUBJECTS=$(git log --format=%s --no-merges origin/dev..HEAD)
+else
+  SUBJECTS=$(git log --format=%s --no-merges -10 HEAD)
+fi
+
+if [ -n "$SUBJECTS" ]; then
+  INVALID=$(echo "$SUBJECTS" | grep -vE "$PATTERN" || true)
+  if [ -n "$INVALID" ]; then
+    echo "BLOCKED: commit message convention violation:"
+    echo "$INVALID"
+    echo "Fix: git reset --soft HEAD~N and rewrite commits. DO NOT force push."
+    exit 1
+  fi
 fi
 
 # Gate 3: uncommitted 변경 없음 확인 (untracked 파일 포함)
