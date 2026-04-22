@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { handleChat, handleAskChat } from './chat.controller';
-import { optionalAuthenticate } from '@07-shared/middlewares';
+import { optionalAuthenticate, validate } from '@07-shared/middlewares';
+import { chatMessageSchema, chatAskSchema } from './chat.schema';
 
 const router = Router();
 
@@ -35,7 +36,8 @@ const router = Router();
  *                 url:
  *                   type: string
  */
-router.post('/', optionalAuthenticate, handleChat);
+// validate는 optionalAuthenticate 뒤에 배치함
+router.post('/', optionalAuthenticate, validate(chatMessageSchema), handleChat);
 
 /**
  * @swagger
@@ -68,6 +70,7 @@ router.post('/', optionalAuthenticate, handleChat);
  *                   type: string
  *                   example: "success"
  */
-router.post('/ask', handleAskChat);
+// validate 미들웨어 추가함
+router.post('/ask', validate(chatAskSchema), handleAskChat);
 
 export { router as chatApi };

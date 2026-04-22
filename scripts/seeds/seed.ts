@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { SurveyQuestion } from '@06-entities/surveys';
 import { config } from '@07-shared/config/config';
-import questions from '@07-shared/lib/seeds/questions.json';
+import questions from './questions.json';
 
 const seedDatabase = async () => {
   try {
