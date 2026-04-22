@@ -31,13 +31,10 @@ blocking 효과가 없음:
 1. `.github/workflows/commitlint.yml`의 `continue-on-error: true` → `false` 교체 PR
 2. GitHub repo Settings > Branch protection > Required status checks에 `commitlint` 추가
 
-> ⚠️ **Transition date 미박제 (작성 시점)**: Wave 2 머지가 완료되면 이 ADR을 편집하여
-> 실제 머지 날짜를 아래 `Transition date` 필드에 기입할 것.
-
 ## Transition date
 
-- **Wave 2 머지일**: TBD (Wave 2 머지 직후 이 ADR 편집하여 날짜 박제)
-- **Blocking 전환 기한**: Wave 2 머지일 + 14 days (D+14)
+- **Wave 2 머지일**: 2026-04-21 (BE PR #42 `fd57a31` create merge)
+- **Blocking 전환 기한**: 2026-05-05 (Wave 2 머지일 + 14 days)
 
 ## Alternatives considered
 
