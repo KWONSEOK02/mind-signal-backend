@@ -1,10 +1,27 @@
 import { config } from '@07-shared/config/config';
 import { AppError } from '@07-shared/errors';
 
+// ===== legacy 단일 slot — 1PC / SEQUENTIAL 경로 호환 =====
 // 메모리 저장소 (서버 재시작 시 파이썬 엔진이 재등록해야 함)
 let registeredEngineUrl: string | null = null;
 
+// ===== DUAL_2PC 전용 저장소 =====
+/** groupId → (subjectIndex → EngineRegistration) 중첩 Map */
+const dualRegistry = new Map<string, Map<number, EngineRegistration>>();
+
+/** groupId → 등록 콜백 Set */
+const registeredCallbacks = new Map<string, Set<() => void>>();
+
+/** 단일 DE 등록 정보 */
+interface EngineRegistration {
+  url: string;
+  subjectIndex: number;
+  registeredAt: number;
+}
+
 export const engineRegistryService = {
+  // ===== 기존 메서드 — backward compat 유지 (engine-proxy.service.ts 5곳 호출 보존) =====
+
   /** 파이썬 엔진 URL 등록 및 secret_key 검증함 */
   register(engineUrl: string, secretKey: string): void {
     if (secretKey !== config.dataEngine.secretKey) {
@@ -25,5 +42,120 @@ export const engineRegistryService = {
   /** 등록 상태 확인함 */
   isRegistered(): boolean {
     return registeredEngineUrl !== null;
+  },
+
+  // ===== 신규 메서드 — DUAL_2PC 전용 =====
+
+  /**
+   * DUAL_2PC 모드 전용 DE 등록 및 secret_key 검증함.
+   *
+   * @param groupId - 실험 그룹 ID
+   * @param subjectIndex - 피실험자 순번 (1-based)
+   * @param engineUrl - 등록할 엔진 URL
+   * @param secretKey - 검증용 시크릿 키
+   */
+  registerDual(
+    groupId: string,
+    subjectIndex: number,
+    engineUrl: string,
+    secretKey: string
+  ): void {
+    if (secretKey !== config.dataEngine.secretKey) {
+      throw new AppError('유효하지 않은 시크릿 키입니다.', 403);
+    }
+
+    if (!dualRegistry.has(groupId)) {
+      dualRegistry.set(groupId, new Map());
+    }
+
+    const registration: EngineRegistration = {
+      url: engineUrl,
+      subjectIndex,
+      registeredAt: Date.now(),
+    };
+
+    dualRegistry.get(groupId)!.set(subjectIndex, registration);
+    console.log(
+      `DUAL_2PC 엔진 등록 완료: groupId=${groupId}, subjectIndex=${subjectIndex}, url=${engineUrl}`
+    );
+
+    // 등록 콜백 전부 invoke — waitForBothEngines EventEmitter 패턴 지원
+    registeredCallbacks.get(groupId)?.forEach((cb) => cb());
+  },
+
+  /**
+   * groupId + subjectIndex로 등록된 엔진 URL 조회함.
+   *
+   * @param groupId - 실험 그룹 ID
+   * @param subjectIndex - 피실험자 순번 (1-based)
+   * @returns 등록된 엔진 URL
+   * @throws AppError 503 — 해당 엔진 미등록 시
+   */
+  getEngineUrlByGroupSubject(groupId: string, subjectIndex: number): string {
+    const registration = dualRegistry.get(groupId)?.get(subjectIndex);
+    if (!registration) {
+      throw new AppError(
+        `DUAL_2PC 엔진 미등록: groupId=${groupId}, subjectIndex=${subjectIndex}`,
+        503
+      );
+    }
+    return registration.url;
+  },
+
+  /**
+   * groupId에 등록된 전체 엔진 Map 반환함.
+   *
+   * @param groupId - 실험 그룹 ID
+   * @returns (subjectIndex → EngineRegistration) Map 또는 undefined
+   */
+  getByGroup(groupId: string): Map<number, EngineRegistration> | undefined {
+    return dualRegistry.get(groupId);
+  },
+
+  /**
+   * groupId의 등록 엔진 수가 expectedCount에 도달했는지 확인함.
+   *
+   * @param groupId - 실험 그룹 ID
+   * @param expectedCount - 기대 등록 수 (기본값 2)
+   * @returns 등록 완료 여부
+   */
+  isFullyRegistered(groupId: string, expectedCount: number = 2): boolean {
+    const group = dualRegistry.get(groupId);
+    return !!group && group.size >= expectedCount;
+  },
+
+  /**
+   * DUAL_2PC 등록 이벤트 구독함.
+   * registerDual 호출 시 콜백을 invoke함.
+   *
+   * @param groupId - 실험 그룹 ID
+   * @param callback - 등록 이벤트 발생 시 호출할 함수
+   * @returns unsubscribe 함수 — Promise settle 후 반드시 호출해야 ghost 콜백 방지됨
+   */
+  onRegistered(groupId: string, callback: () => void): () => void {
+    if (!registeredCallbacks.has(groupId)) {
+      registeredCallbacks.set(groupId, new Set());
+    }
+    const callbacks = registeredCallbacks.get(groupId)!;
+    callbacks.add(callback);
+
+    return () => {
+      callbacks.delete(callback);
+      if (callbacks.size === 0) {
+        registeredCallbacks.delete(groupId);
+      }
+    };
+  },
+
+  /**
+   * groupId에 해당하는 DUAL_2PC 등록 데이터 및 콜백 전부 제거함.
+   * stopMeasurement DUAL_2PC 분기에서 호출됨.
+   *
+   * @param groupId - 제거할 그룹 ID
+   */
+  cleanupGroup(groupId: string): void {
+    dualRegistry.delete(groupId);
+    registeredCallbacks.delete(groupId);
+    console.log(`DUAL_2PC 엔진 레지스트리 정리 완료: groupId=${groupId}`);
   },
 };
