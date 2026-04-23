@@ -66,6 +66,16 @@ export const config = {
   kakaoClientId: process.env.KAKAO_CLIENT_ID,
   kakaoClientSecret: process.env.KAKAO_CLIENT_SECRET,
   kakaoRedirectUri: process.env.KAKAO_REDIRECT_URI,
+  // Phase 16 DUAL_2PC 타임스탬프 정렬 설정 (optional — 기본값 사용 가능)
+  dualPc: {
+    // plan-review M-4: 편도 50ms + NTP skew 50ms = 200ms 기본값
+    timestampToleranceMs: Number(
+      process.env.DUAL_2PC_TIMESTAMP_TOLERANCE_MS ?? 200
+    ),
+    registrationTimeoutMs: Number(
+      process.env.DUAL_2PC_REGISTRATION_TIMEOUT_MS ?? 60000
+    ),
+  },
 } as const; // 읽기 전용으로 설정
 
 console.log(`현재 구동 환경: ${config.env}`);
