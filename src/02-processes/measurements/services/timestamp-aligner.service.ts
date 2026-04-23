@@ -2,13 +2,14 @@
  * timestamp-aligner.service.ts
  *
  * 두 subject EEG 샘플을 서버 ingest 타임스탬프 기준으로 정렬하는
- * 모듈 레벨 레지스트리 (Phase 16 Wave 1 skeleton).
+ * 모듈 레벨 레지스트리 (Phase 16 Wave 1 skeleton → Wave 2 본 구현).
  *
- * Wave 2 BE-dispatch-agent: ingest / flush 본 구현 담당.
  * flush 호출 주체 (v9 R9-H-2): subscribeWithAligner(groupId) 내부
  * setInterval(() => timestampAlignerRegistry.flush(groupId), 100) 기동,
  * unsubscribeGroupChannels(groupId) 헬퍼에서 clearInterval 처리.
  */
+
+import { SocketService } from '@07-shared/lib/socket';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -16,7 +17,6 @@
 
 /**
  * 단일 EEG 주파수 대역 파워 값.
- * TODO Wave 2: 기존 타입 정의 발견 시 해당 import로 교체할 것.
  */
 export interface WavePower {
   delta: number;
@@ -29,6 +29,7 @@ export interface WavePower {
 /**
  * 두 subject 샘플이 타임스탬프 기준으로 정렬된 쌍.
  * v7 H-PREP-1 / v8 H-1: subjectIndex 1-based 통일.
+ * snake_case 필드명은 Socket.io 페이로드 계약 (FE AlignedSample 타입과 정합).
  */
 export interface AlignedSample {
   groupId: string;
@@ -41,23 +42,32 @@ export interface AlignedSample {
 // Internal class
 // ---------------------------------------------------------------------------
 
+/** 버퍼 엔트리 타입 */
+interface BufferEntry {
+  ts: number;
+  sample: WavePower;
+}
+
 /**
  * 단일 groupId 전용 타임스탬프 정렬기.
- * ingest / flush 본 구현은 Wave 2 BE-dispatch-agent 담당.
+ * plan-review H-4 반영 — 모듈 레벨 registry에서 groupId별로 인스턴스 관리됨.
  */
 class TimestampAligner {
   /** subjectIndex(1 또는 2) 별 미처리 샘플 버퍼 */
-  private buffer: Map<number, Array<{ ts: number; sample: WavePower }>> =
-    new Map();
+  private buffer: Map<number, BufferEntry[]> = new Map();
 
   /**
+   * @param groupId - 실험 그룹 ID (SocketService.emitToGroup 호출에 사용)
    * @param toleranceMs - 두 subject 타임스탬프 허용 오차(ms). 기본 200ms (plan-review M-4)
    */
-  constructor(private toleranceMs: number) {}
+  constructor(
+    private groupId: string,
+    private toleranceMs: number
+  ) {}
 
   /**
    * 단일 subject 샘플을 버퍼에 적재함.
-   * Wave 2 구현: subjectIndex(1 또는 2) 별 buffer push.
+   * subjectIndex(1 또는 2) 별 buffer push.
    *
    * @param subjectIndex - 1 또는 2 (1-based)
    * @param sample - EEG 주파수 대역 파워 값
@@ -68,28 +78,81 @@ class TimestampAligner {
     sample: WavePower,
     serverTimestamp: number
   ): void {
-    // TODO Wave 2 BE-dispatch-agent: subjectIndex 별 buffer push 구현
-    void subjectIndex;
-    void sample;
-    void serverTimestamp;
-    void this.toleranceMs;
-    void this.buffer;
+    if (!this.buffer.has(subjectIndex)) {
+      this.buffer.set(subjectIndex, []);
+    }
+    this.buffer.get(subjectIndex)!.push({ ts: serverTimestamp, sample });
   }
 
   /**
-   * 버퍼 스캔 후 정렬 가능한 쌍 반환함.
-   * Wave 2 구현: |ts_1 - ts_2| ≤ toleranceMs 쌍 → AlignedSample 배열 반환.
+   * 버퍼 스캔 후 정렬 가능한 쌍 생성 + Socket.io 전송 + 만료 항목 drop 수행함.
    *
-   * @returns 정렬된 AlignedSample 배열 (Wave 2 이전은 빈 배열)
+   * - |ts_1 - ts_2| ≤ toleranceMs 인 쌍 생성
+   * - AlignedSample.subject_1 / subject_2 필드로 매핑 (1-based)
+   * - 매칭 실패 샘플은 Date.now() - ts > 500ms 시 drop (timestamp_min-aged)
+   * - 정렬된 쌍은 SocketService.emitToGroup(groupId, 'aligned_pair', alignedSample) 전송
+   *
+   * @returns 정렬된 AlignedSample 배열
    */
   flush(): AlignedSample[] {
-    // TODO Wave 2 BE-dispatch-agent:
-    //   - subjectIndex=1, 2 buffer 스캔
-    //   - |ts_1 - ts_2| ≤ toleranceMs 인 쌍 생성
-    //   - AlignedSample.subject_1 / subject_2 필드로 매핑
-    //   - 매칭 실패 샘플 Date.now() - ts > 500ms 시 drop
-    //   - 정렬된 쌍 SocketService.emitToGroup(groupId, 'aligned_pair', sample) 전송
-    return [];
+    const now = Date.now();
+    const expireThresholdMs = 500;
+    const aligned: AlignedSample[] = [];
+
+    const buf1 = this.buffer.get(1) ?? [];
+    const buf2 = this.buffer.get(2) ?? [];
+
+    // 만료 항목 drop — 매칭 실패 샘플 Date.now() - ts > 500ms 시 제거
+    const fresh1 = buf1.filter((e) => now - e.ts <= expireThresholdMs);
+    const fresh2 = buf2.filter((e) => now - e.ts <= expireThresholdMs);
+
+    // 그리디 매칭: buf1 각 항목에 대해 toleranceMs 내 buf2 최근접 항목 탐색
+    // 매칭 여부를 인덱스로 추적하여 버퍼 업데이트에 활용함
+    const usedIdx1 = new Set<number>();
+    const usedIdx2 = new Set<number>();
+
+    for (let i1 = 0; i1 < fresh1.length; i1++) {
+      const entry1 = fresh1[i1];
+      let bestIdx = -1;
+      let bestDiff = Infinity;
+
+      for (let i = 0; i < fresh2.length; i++) {
+        if (usedIdx2.has(i)) continue;
+        const diff = Math.abs(entry1.ts - fresh2[i].ts);
+        if (diff <= this.toleranceMs && diff < bestDiff) {
+          bestDiff = diff;
+          bestIdx = i;
+        }
+      }
+
+      if (bestIdx >= 0) {
+        usedIdx1.add(i1);
+        usedIdx2.add(bestIdx);
+        const entry2 = fresh2[bestIdx];
+        // 두 타임스탬프의 평균을 aligned timestamp로 사용함
+        const alignedTs = Math.round((entry1.ts + entry2.ts) / 2);
+        // snake_case 필드명은 FE Socket.io 페이로드 계약 — eslint-disable 필수
+        /* eslint-disable camelcase */
+        const sample: AlignedSample = {
+          groupId: this.groupId,
+          timestamp_ms: alignedTs,
+          subject_1: entry1.sample,
+          subject_2: entry2.sample,
+        };
+        /* eslint-enable camelcase */
+        aligned.push(sample);
+        SocketService.emitToGroup(this.groupId, 'aligned_pair', sample);
+      }
+    }
+
+    // 미매칭 항목만 버퍼에 유지 — 만료 항목(fresh 필터에서 제외된 것)은 자동 drop됨
+    const newBuf1 = fresh1.filter((_, idx) => !usedIdx1.has(idx));
+    const newBuf2 = fresh2.filter((_, idx) => !usedIdx2.has(idx));
+
+    this.buffer.set(1, newBuf1);
+    this.buffer.set(2, newBuf2);
+
+    return aligned;
   }
 }
 
@@ -115,14 +178,14 @@ export const timestampAlignerRegistry = {
   getOrCreate(groupId: string, toleranceMs: number): TimestampAligner {
     const existing = registry.get(groupId);
     if (existing) return existing;
-    const aligner = new TimestampAligner(toleranceMs);
+    const aligner = new TimestampAligner(groupId, toleranceMs);
     registry.set(groupId, aligner);
     return aligner;
   },
 
   /**
    * 단일 subject 샘플을 해당 group 의 aligner 버퍼에 적재함.
-   * Wave 2 구현: 내부 TimestampAligner.ingest() 위임.
+   * 내부 TimestampAligner.ingest() 위임.
    *
    * @param groupId - 실험 그룹 ID
    * @param subjectIndex - 1 또는 2 (1-based)
@@ -135,24 +198,22 @@ export const timestampAlignerRegistry = {
     sample: WavePower,
     serverTimestamp: number
   ): void {
-    // TODO Wave 2 BE-dispatch-agent: getOrCreate 후 aligner.ingest() 호출
-    void groupId;
-    void subjectIndex;
-    void sample;
-    void serverTimestamp;
+    const aligner = registry.get(groupId);
+    if (!aligner) return; // aligner 미생성 시 무시함 (race condition 방어)
+    aligner.ingest(subjectIndex, sample, serverTimestamp);
   },
 
   /**
-   * 해당 group 의 버퍼를 스캔하여 정렬된 쌍을 반환함.
+   * 해당 group 의 버퍼를 스캔하여 정렬된 쌍을 반환하고 Socket.io로 전송함.
    * flush 호출 주체 (v9 R9-H-2): subscribeWithAligner 내부 setInterval(100).
    *
    * @param groupId - 실험 그룹 ID
-   * @returns 정렬된 AlignedSample 배열 (Wave 2 이전은 빈 배열)
+   * @returns 정렬된 AlignedSample 배열
    */
   flush(groupId: string): AlignedSample[] {
-    // TODO Wave 2 BE-dispatch-agent: aligner.flush() 호출 후 결과 반환
-    void groupId;
-    return [];
+    const aligner = registry.get(groupId);
+    if (!aligner) return [];
+    return aligner.flush();
   },
 
   /**

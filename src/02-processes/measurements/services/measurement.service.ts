@@ -2,13 +2,228 @@ import { Session } from '@06-entities/sessions';
 import { redisService } from '@07-shared/lib/redis';
 import { SocketService } from '@07-shared/lib/socket';
 import { AppError } from '@07-shared/errors';
-import { engineProxyService } from '@02-processes/engine/services/engine-proxy.service';
+import { engineRegistryService } from '@02-processes/engine/services/engine-registry.service';
+import { timestampAlignerRegistry } from './timestamp-aligner.service';
+import { stimulusBroadcasterService } from './stimulus-broadcaster.service';
+import type { WavePower } from './timestamp-aligner.service';
 import { RedisClientType } from 'redis';
+import { config } from '@07-shared/config/config';
+
+// ---------------------------------------------------------------------------
+// 반환 타입 — discriminated union (v5 N-9 반영)
+// ---------------------------------------------------------------------------
+
+/** startMeasurementService 반환 타입 */
+export type StartMeasurementResult =
+  | { kind: 'DUAL_2PC'; groupId: string } // fire-and-forget 경로
+  | { kind: 'SYNC'; measuredAt: Date | undefined }; // 기존 경로
+
+// ---------------------------------------------------------------------------
+// 모듈 레벨 구독자 레지스트리 — 기존 1PC 경로
+// ---------------------------------------------------------------------------
 
 /** Redis 구독자 레지스트리 — 키: `${groupId}:${subjectIndex}` */
 const subscriberRegistry = new Map<string, RedisClientType>();
 
-export const startMeasurementService = async (sessionId: string) => {
+// ---------------------------------------------------------------------------
+// 모듈 레벨 구독자 레지스트리 — DUAL_2PC 경로 (v7 H-1 반영)
+// ---------------------------------------------------------------------------
+
+/** DUAL_2PC groupId별 Redis 구독자 목록 — cleanup 시 unsubscribe 필요 */
+const groupSubscribers = new Map<string, RedisClientType[]>();
+
+/** DUAL_2PC groupId별 flush setInterval 핸들러 — unsubscribeGroupChannels에서 clearInterval */
+const groupFlushIntervals = new Map<string, ReturnType<typeof setInterval>>();
+
+// ---------------------------------------------------------------------------
+// 내부 헬퍼 — DUAL_2PC 전용
+// ---------------------------------------------------------------------------
+
+/**
+ * DUAL_2PC groupId의 두 Redis 채널(subject 1 + 2)을 구독하고
+ * aligner.ingest()로 라우팅함 (v7 H-1 반영).
+ * flush setInterval(100ms)도 이 함수 내부에서 기동함 (v9 R9-H-2 반영).
+ *
+ * @param groupId - 실험 그룹 ID
+ */
+async function subscribeWithAligner(groupId: string): Promise<void> {
+  const subscribers: RedisClientType[] = [];
+
+  // v7 H-PREP-1: subjectIndex는 1-based
+  // 기존 Redis 채널 규칙(`mind-signal:{groupId}:subject:{subjectIndex}`) 그대로 유지
+  for (const subjectIndex of [1, 2]) {
+    const subscriber = redisService.client.duplicate() as RedisClientType;
+    await subscriber.connect();
+    const channel = `mind-signal:${groupId}:subject:${subjectIndex}`;
+    await subscriber.subscribe(channel, (message: string) => {
+      try {
+        const parsed = JSON.parse(message);
+        // v8 C-1: streamer.py가 brain_sync_all 외에 headset_status 타입도 동일 채널에 publish
+        // (watchdog L172-183, on_headset_disconnected L193-204). parsed.waves 필드 없음 → aligner에 undefined 주입 방지
+        if (parsed.type !== 'brain_sync_all') return;
+        // waves 필드 → WavePower 추출 (core/streamer.py L266-277 payload 구조 기준)
+        const sample: WavePower = parsed.waves;
+        const serverTimestamp = Date.now();
+        timestampAlignerRegistry.ingest(
+          groupId,
+          subjectIndex,
+          sample,
+          serverTimestamp
+        );
+      } catch (err) {
+        console.error(`DUAL_2PC ${channel} parse error:`, err);
+      }
+    });
+    subscribers.push(subscriber);
+  }
+  groupSubscribers.set(groupId, subscribers);
+
+  // v9 R9-H-2: flush 호출 주체는 subscribeWithAligner 내부 setInterval(100)
+  // unsubscribeGroupChannels에서 clearInterval 처리
+  const intervalId = setInterval(() => {
+    timestampAlignerRegistry.flush(groupId);
+  }, 100);
+  groupFlushIntervals.set(groupId, intervalId);
+}
+
+/**
+ * DUAL_2PC groupId의 Redis 구독자 2개 + flush interval 전부 해제함.
+ * stopMeasurementService allCompleted gate에서 호출됨.
+ *
+ * @param groupId - 실험 그룹 ID
+ */
+async function unsubscribeGroupChannels(groupId: string): Promise<void> {
+  // flush interval 먼저 중단함
+  const intervalId = groupFlushIntervals.get(groupId);
+  if (intervalId !== undefined) {
+    clearInterval(intervalId);
+    groupFlushIntervals.delete(groupId);
+  }
+
+  const subscribers = groupSubscribers.get(groupId);
+  if (!subscribers) return;
+  for (const subscriber of subscribers) {
+    try {
+      await subscriber.unsubscribe();
+      await subscriber.quit();
+    } catch (err) {
+      console.error('DUAL_2PC subscriber cleanup error:', err);
+    }
+  }
+  groupSubscribers.delete(groupId);
+}
+
+/**
+ * 두 DE가 모두 등록될 때까지 기다리거나 timeout 발생함 (v4 N-4 + v4 N-7 반영).
+ * EventEmitter 패턴: engineRegistryService.registerDual() 호출 시 emit.
+ * Promise settle 시 unsubscribe + clearTimeout 필수 (ghost 콜백/타이머 누수 방지).
+ *
+ * @param groupId - 실험 그룹 ID
+ * @param timeoutMs - 최대 대기 시간(ms)
+ */
+async function waitForBothEngines(
+  groupId: string,
+  timeoutMs: number
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let unsubscribe: (() => void) | null = null;
+    let timer: NodeJS.Timeout | null = null;
+
+    const cleanup = () => {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    };
+
+    const checkReady = () => {
+      if (engineRegistryService.isFullyRegistered(groupId, 2)) {
+        cleanup();
+        resolve();
+      }
+    };
+
+    // 즉시 1회 체크 (이미 등록 완료됐을 수 있음)
+    checkReady();
+
+    // 이벤트 listen — unsubscribe 함수 저장
+    unsubscribe = engineRegistryService.onRegistered(groupId, checkReady);
+
+    // timeout — timer 참조 저장
+    timer = setTimeout(() => {
+      cleanup();
+      reject(new AppError('DE 등록 timeout', 504));
+    }, timeoutMs);
+  });
+}
+
+/**
+ * DUAL_2PC 측정 fire-and-forget 실행함 (v4 N-4 반영).
+ * Express 요청 핸들러에서는 이미 202 응답 반환 후 비동기로 실행됨.
+ *
+ * @param groupId - 실험 그룹 ID
+ */
+function startDualMeasurement(groupId: string): void {
+  (async () => {
+    try {
+      // 두 DE 등록 대기 (최대 60초) — 클라이언트에게는 이미 응답 반환됨
+      await waitForBothEngines(groupId, config.dualPc.registrationTimeoutMs);
+
+      // aligner registry에 인스턴스 생성
+      timestampAlignerRegistry.getOrCreate(
+        groupId,
+        config.dualPc.timestampToleranceMs
+      );
+
+      // stimulus broadcast (room emit)
+      await stimulusBroadcasterService.broadcast(groupId);
+
+      // Redis 구독 → aligner.ingest() (v7 H-1: 두 채널 각각 구독 필요)
+      await subscribeWithAligner(groupId);
+
+      // 성공 통보
+      SocketService.emitToGroup(groupId, 'dual-session-ready', {
+        groupId,
+        // eslint-disable-next-line camelcase
+        timestamp_ms: Date.now(),
+      });
+    } catch (err) {
+      // 실패 통보 (60초 timeout 포함)
+      SocketService.emitToGroup(groupId, 'dual-session-failed', {
+        groupId,
+        error: err instanceof Error ? err.message : 'unknown',
+      });
+      // 세션 상태 CANCELLED로 전이
+      await Session.updateMany(
+        { groupId },
+        { status: 'CANCELLED', stopReason: 'ProcessError' }
+      );
+    }
+  })();
+}
+
+// ---------------------------------------------------------------------------
+// 공개 서비스 함수
+// ---------------------------------------------------------------------------
+
+/**
+ * 뇌파 측정 시작 서비스 (discriminated union 반환, v5 N-9 반영).
+ *
+ * DUAL_2PC: fire-and-forget 후 { kind: 'DUAL_2PC', groupId } 반환.
+ * 그 외: 기존 동기 경로 후 { kind: 'SYNC', measuredAt } 반환.
+ *
+ * @param sessionId - 측정을 시작할 세션 ID
+ * @returns StartMeasurementResult discriminated union
+ * @throws AppError 404 — 세션 미존재
+ * @throws AppError 400 — 상태 전이 불가 또는 subjectIndex 없음
+ */
+export const startMeasurementService = async (
+  sessionId: string
+): Promise<StartMeasurementResult> => {
   // 1. 세션 조회 및 검증함
   const session = await Session.findById(sessionId);
   if (!session) {
@@ -23,17 +238,24 @@ export const startMeasurementService = async (sessionId: string) => {
     );
   }
 
-  // 3. subjectIndex null/range 검사 수행함 (Bug 3 guard)
+  // 3. DUAL_2PC 분기 먼저 (subjectIndex guard 이전, v2 N-2 반영)
+  // DUAL_2PC는 subjectIndex 없어도 OK — groupId 기반 처리
+  if (session.experimentMode === 'DUAL_2PC') {
+    startDualMeasurement(session.groupId); // fire-and-forget (비동기)
+    return { kind: 'DUAL_2PC', groupId: session.groupId };
+  }
+
+  // 4. subjectIndex guard (SEQUENTIAL/DUAL/BTI 경로만, Bug 3 guard)
   if (session.subjectIndex === null || session.subjectIndex <= 0) {
     throw new AppError('세션에 유효한 subjectIndex가 없습니다.', 400);
   }
 
-  // 4. DB 업데이트함
+  // 5. DB 업데이트함 (기존 경로)
   session.status = 'MEASURING';
   session.measuredAt = new Date();
   await session.save();
 
-  // 5. Redis 구독자 연결 (실패 시 상태 롤백 수행함)
+  // 6. Redis 구독자 연결 (실패 시 상태 롤백 수행함)
   const subscriber = redisService.client.duplicate();
   try {
     await subscriber.connect();
@@ -62,7 +284,9 @@ export const startMeasurementService = async (sessionId: string) => {
     }
   });
 
-  // 6. 엔진 프록시를 통해 EEG 스트리밍 시작 요청함 (로컬 FastAPI → core.main spawn)
+  // 7. 엔진 프록시를 통해 EEG 스트리밍 시작 요청함 (로컬 FastAPI → core.main spawn)
+  const { engineProxyService } =
+    await import('@02-processes/engine/services/engine-proxy.service');
   try {
     const result = await engineProxyService.streamStart(
       session.groupId,
@@ -86,12 +310,18 @@ export const startMeasurementService = async (sessionId: string) => {
     throw err;
   }
 
-  return { measuredAt: session.measuredAt };
+  return { kind: 'SYNC', measuredAt: session.measuredAt };
 };
 
 /**
- * 측정 종료 후 세션 COMPLETED 전이 + Redis 구독 해제 수행함
- * 두 subject 모두 COMPLETED 시 포스트-측정 오케스트레이션 트리거함
+ * 측정 종료 후 세션 COMPLETED 전이 + Redis 구독 해제 수행함.
+ * 두 subject 모두 COMPLETED 시 포스트-측정 오케스트레이션 트리거함.
+ * DUAL_2PC: allCompleted gate — 두 subject 모두 완료 시에만 emit (v7 H-2 반영).
+ *
+ * @param groupId - 실험 그룹 ID
+ * @param subjectIndex - 피실험자 순번
+ * @param stopReason - 측정 종료 사유
+ * @returns allCompleted 여부
  */
 export const stopMeasurementService = async (
   groupId: string,
@@ -124,7 +354,7 @@ export const stopMeasurementService = async (
   }
   await session.save();
 
-  // Redis 구독자 정리함
+  // 기존 1PC 경로 Redis 구독자 정리함
   const registryKey = `${groupId}:${subjectIndex}`;
   const subscriber = subscriberRegistry.get(registryKey);
   if (subscriber) {
@@ -138,18 +368,39 @@ export const stopMeasurementService = async (
     subscriberRegistry.delete(registryKey);
   }
 
-  // Socket.io 측정 완료 이벤트 발행함
-  SocketService.emitLiveEvent('measurement-complete', {
-    sessionId: session._id,
+  // 두 subject 모두 COMPLETED인지 확인함
+  const allSessions = await Session.find({ groupId });
+  const allCompleted = allSessions.every((s) => s.status === 'COMPLETED');
+
+  const payload = {
     groupId,
     subjectIndex,
     status: 'COMPLETED',
     stopReason,
-  });
+  };
 
-  // 두 subject 모두 COMPLETED인지 확인함
-  const allSessions = await Session.find({ groupId });
-  const allCompleted = allSessions.every((s) => s.status === 'COMPLETED');
+  // v7 H-2: DUAL_2PC는 allCompleted일 때만 1회 emit + cleanup
+  // 기존 기존 SEQUENTIAL/DUAL/BTI 경로는 subject별 emit 유지 (v2 N-3 반영)
+  if (session.experimentMode === 'DUAL_2PC') {
+    if (allCompleted) {
+      // 두 subject 모두 COMPLETED일 때만 1회 emit
+      SocketService.emitToGroup(session.groupId, 'measurement-complete', {
+        ...payload,
+        sessionId: session._id,
+      });
+      timestampAlignerRegistry.cleanup(session.groupId);
+      engineRegistryService.cleanupGroup(session.groupId);
+      // subscribeWithAligner가 생성한 Redis subscriber 2개 + flush interval 전부 해제
+      await unsubscribeGroupChannels(session.groupId);
+    }
+    // 첫 subject stop 시점에는 emit 생략 (UI는 "partner 측정 중" 상태 유지)
+  } else {
+    // 기존 SEQUENTIAL/DUAL/BTI 경로 유지 (subject별 emit 유지)
+    SocketService.emitLiveEvent('measurement-complete', {
+      sessionId: session._id,
+      ...payload,
+    });
+  }
 
   return { allCompleted };
 };
