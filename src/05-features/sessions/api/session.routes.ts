@@ -380,4 +380,92 @@ router.get(
   sessionsController.checkGroupStatus
 );
 
+/**
+ * @openapi
+ * /api/sessions/{groupId}/invite-operator:
+ *   post:
+ *     summary: operator invite 토큰 발급 (Phase 16 DUAL_2PC)
+ *     description: |
+ *       groupId에 해당하는 세션의 experimentMode를 DUAL_2PC로 갱신하고
+ *       5분 유효 JWT invite 토큰을 발급합니다.
+ *       QR 코드로 노출되는 토큰으로, 파트너 PC가 스캔하여 합류합니다.
+ *     tags: [Sessions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: groupId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "A1B2C3"
+ *     responses:
+ *       201:
+ *         description: invite 토큰 발급 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: "success" }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     token: { type: string }
+ *                     expiresAt: { type: number, description: "만료 타임스탬프(ms)" }
+ *       401:
+ *         description: 인증 실패
+ *       404:
+ *         description: 해당 groupId 세션 없음
+ */
+router.post(
+  '/:groupId/invite-operator',
+  authenticate,
+  sessionsController.createOperatorInviteHandler
+);
+
+/**
+ * @openapi
+ * /api/sessions/join-as-operator:
+ *   post:
+ *     summary: operator join 처리 (Phase 16 DUAL_2PC)
+ *     description: |
+ *       QR 스캔으로 획득한 JWT 토큰을 검증하여 groupId와 experimentMode를 반환합니다.
+ *       인증 없이 호출 가능 (QR 직접 스캔 flow 지원).
+ *     tags: [Sessions]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: invite-operator 엔드포인트에서 발급된 JWT
+ *     responses:
+ *       200:
+ *         description: join 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: "success" }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     groupId: { type: string }
+ *                     experimentMode: { type: string, example: "DUAL_2PC" }
+ *       400:
+ *         description: token 필드 누락 또는 잘못된 토큰 타입
+ *       401:
+ *         description: 토큰 서명 오류 또는 만료
+ *       404:
+ *         description: 해당 groupId 세션 없음
+ */
+router.post('/join-as-operator', sessionsController.joinAsOperatorHandler);
+
 export default router;

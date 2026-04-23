@@ -4,6 +4,8 @@ import {
   pairDeviceProcess,
 } from '@05-features/sessions/services/pairing.service';
 import { submitConsentProcess } from '@05-features/sessions/services/submit-consent.service';
+import { createOperatorInviteToken } from '@05-features/sessions/services/invite-operator.service';
+import { joinAsOperator } from '@05-features/sessions/services/join-operator.service';
 import { AppError } from '@07-shared/errors';
 import {
   pairDeviceSchema,
@@ -126,6 +128,56 @@ export const pairDevice = async (
     res.status(200).json({
       status: 'success',
       data: session,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * [Controller] operator invite 토큰 발급 처리함.
+ * authenticate 미들웨어 적용 필수 (operator 인증 필요).
+ */
+export const createOperatorInviteHandler = async (
+  req: AuthedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { groupId } = req.params;
+
+    const result = await createOperatorInviteToken(groupId);
+
+    res.status(201).json({
+      status: 'success',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * [Controller] operator join 처리함.
+ * QR 직접 스캔 flow 지원 — authenticate 미들웨어 미적용, JWT body 검증만 수행함.
+ */
+export const joinAsOperatorHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { token } = req.body as { token: string };
+
+    if (!token || typeof token !== 'string') {
+      throw new AppError('token 필드가 필요합니다.', 400);
+    }
+
+    const result = await joinAsOperator(token);
+
+    res.status(200).json({
+      status: 'success',
+      data: result,
     });
   } catch (error) {
     next(error);
