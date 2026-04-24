@@ -101,6 +101,26 @@ export const engineController = {
     }
   },
 
+  /** DUAL_2PC 엔진 URL 등록 처리함 */
+  registerDual: (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { groupId, subjectIndex, engineUrl, secretKey } = req.body;
+      engineRegistryService.registerDual(
+        groupId,
+        subjectIndex,
+        engineUrl,
+        secretKey
+      );
+      const group = engineRegistryService.getByGroup(groupId);
+      res.status(200).json({
+        message: 'DUAL_2PC 엔진 등록 완료',
+        registeredCount: group?.size ?? 0,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   /** 파이프라인 분석 요청을 파이썬 엔진으로 프록시함 */
   analyzePipeline: async (req: Request, res: Response, next: NextFunction) => {
     try {

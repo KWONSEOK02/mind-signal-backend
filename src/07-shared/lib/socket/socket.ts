@@ -22,6 +22,27 @@ export class SocketService {
     this.io.on('connection', (socket: Socket) => {
       console.log(`New client connected: ${socket.id}`);
 
+      // 신규 — room join 핸들러 + ack 반환 (Phase 16 plan-review H-2 + v2 Medium 반영)
+      socket.on(
+        'join-room',
+        (
+          groupId: string,
+          ack?: (response: {
+            ok: boolean;
+            groupId?: string;
+            error?: string;
+          }) => void
+        ) => {
+          if (typeof groupId !== 'string' || groupId.length === 0) {
+            ack?.({ ok: false, error: 'invalid groupId' });
+            return;
+          }
+          socket.join(groupId);
+          console.log(`Socket ${socket.id} joined room ${groupId}`);
+          ack?.({ ok: true, groupId });
+        }
+      );
+
       socket.on('disconnect', () => {
         console.log(`Client disconnected: ${socket.id}`);
       });
@@ -46,9 +67,25 @@ export class SocketService {
    * @param {string} event - 이벤트 명 (기본값: 'eeg-live')
    * @param {any} data - 전송할 뇌파 데이터 객체
    */
-  public static emitLiveEvent(event: string = 'eeg-live', data: any): void {
+  public static emitLiveEvent(event: string = 'eeg-live', data: unknown): void {
     if (this.io) {
       this.io.emit(event, data);
+    }
+  }
+
+  /**
+   * 특정 groupId room에 이벤트 브로드캐스트 (Phase 16 DUAL_2PC 전용)
+   * @param {string} groupId - 대상 room 식별자
+   * @param {string} event - 이벤트 명
+   * @param {unknown} data - 전송할 데이터 객체
+   */
+  public static emitToGroup(
+    groupId: string,
+    event: string,
+    data: unknown
+  ): void {
+    if (this.io) {
+      this.io.to(groupId).emit(event, data);
     }
   }
 }
