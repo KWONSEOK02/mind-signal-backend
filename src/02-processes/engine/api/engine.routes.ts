@@ -74,6 +74,52 @@ const registerSchema = z.object({
  */
 router.post('/register', validate(registerSchema), engineController.register);
 
+// DUAL_2PC 모드에서 각 DE 프로세스가 부팅 시 호출하는 등록 엔드포인트
+const registerDualSchema = z.object({
+  groupId: z.string().min(1),
+  subjectIndex: z.number().int().min(1).max(2),
+  engineUrl: z.string().url(),
+  secretKey: z.string().min(1),
+});
+
+/**
+ * @openapi
+ * /api/engine/register-dual:
+ *   post:
+ *     summary: DUAL_2PC 엔진 URL 등록 (groupId+subjectIndex별)
+ *     description: DUAL_2PC 모드에서 각 DE 프로세스가 부팅 시 호출. 인증 불필요 (엔진↔백엔드 내부).
+ *     tags: [Engine]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [groupId, subjectIndex, engineUrl, secretKey]
+ *             properties:
+ *               groupId: { type: string, minLength: 1, example: "grp_abc123" }
+ *               subjectIndex: { type: integer, minimum: 1, maximum: 2, example: 1 }
+ *               engineUrl: { type: string, format: uri, example: "http://192.168.0.10:5002" }
+ *               secretKey: { type: string, minLength: 1 }
+ *     responses:
+ *       200:
+ *         description: 등록 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message: { type: string, example: "DUAL_2PC 엔진 등록 완료" }
+ *                 registeredCount: { type: integer, example: 2 }
+ *       400: { description: Zod 유효성 실패 }
+ *       403: { description: secretKey 불일치 }
+ */
+router.post(
+  '/register-dual',
+  validate(registerDualSchema),
+  engineController.registerDual
+);
+
 // 전체 파이프라인 분석 프록시
 const analyzePipelineSchema = z.object({
   groupId: z.string().min(1),

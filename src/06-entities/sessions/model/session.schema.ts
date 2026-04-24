@@ -99,7 +99,7 @@ const sessionSchema = new Schema<Session, SessionModel, SessionMethods>(
     },
     experimentMode: {
       type: String,
-      enum: ['DUAL', 'SEQUENTIAL', 'BTI'],
+      enum: ['DUAL', 'SEQUENTIAL', 'BTI', 'DUAL_2PC'],
       required: true,
       default: 'DUAL',
     },
@@ -115,6 +115,7 @@ const sessionSchema = new Schema<Session, SessionModel, SessionMethods>(
 sessionSchema.methods.toJSON = function () {
   const obj = this.toObject() as any;
   obj.id = obj._id;
+  obj.experimentMode ??= 'DUAL'; // 레거시 문서 방어 1줄
   delete obj._id;
   delete obj.updatedAt;
   delete obj.createdAt;
