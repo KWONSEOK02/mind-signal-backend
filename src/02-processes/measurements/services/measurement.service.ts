@@ -173,6 +173,15 @@ function startDualMeasurement(groupId: string): void {
       // 두 DE 등록 대기 (최대 60초) — 클라이언트에게는 이미 응답 반환됨
       await waitForBothEngines(groupId, config.dualPc.registrationTimeoutMs);
 
+      // ▼ 신규 (T17-4): 두 DE에 streamStart 병렬 호출
+      const { engineProxyService } =
+        await import('@02-processes/engine/services/engine-proxy.service');
+      await Promise.all([
+        engineProxyService.streamStartDual(groupId, 1),
+        engineProxyService.streamStartDual(groupId, 2),
+      ]);
+      // ▲ 신규
+
       // aligner registry에 인스턴스 생성
       timestampAlignerRegistry.getOrCreate(
         groupId,
@@ -192,7 +201,7 @@ function startDualMeasurement(groupId: string): void {
         timestamp_ms: Date.now(),
       });
     } catch (err) {
-      // 실패 통보 (60초 timeout 포함)
+      // 실패 통보 (60초 timeout + streamStart 실패 포함)
       SocketService.emitToGroup(groupId, 'dual-session-failed', {
         groupId,
         error: err instanceof Error ? err.message : 'unknown',
