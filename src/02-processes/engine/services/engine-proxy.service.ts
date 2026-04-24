@@ -173,6 +173,50 @@ export const engineProxyService = {
   },
 
   /**
+   * DUAL_2PC 전용 스트리밍 시작 요청 프록시함.
+   * groupId+subjectIndex로 등록된 DE URL 조회 후 /api/stream/start 호출함.
+   *
+   * @param groupId - 실험 그룹 ID
+   * @param subjectIndex - 피실험자 순번 (1 또는 2)
+   * @returns 엔진 응답 페이로드
+   * @throws AppError 503 — 해당 groupId+subjectIndex DE 미등록
+   */
+  streamStartDual: async (
+    groupId: string,
+    subjectIndex: number
+  ): Promise<Record<string, unknown>> => {
+    const engineUrl = engineRegistryService.getEngineUrlByGroupSubject(
+      groupId,
+      subjectIndex
+    );
+
+    // [RC-2 반영] snake_case key — DE Pydantic `StreamStartRequest` 와 일치
+    // (기존 streamStart engine-proxy.service.ts:157-160 pattern 재사용)
+    const response = await fetch(`${engineUrl}/api/stream/start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Engine-Secret': config.dataEngine.secretKey,
+      },
+      body: JSON.stringify({
+        ['group_id']: groupId,
+        ['subject_index']: subjectIndex,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new AppError(
+        `DUAL_2PC 엔진 스트림 시작 실패: ${response.status} ${errorText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return toCamelCaseKeys(data) as Record<string, unknown>;
+  },
+
+  /**
    * DUAL_2PC 파이프라인 분석 요청을 파이썬 엔진으로 프록시함 (v8 M-1 반영).
    * subject 1 담당 DE를 analysis 전담으로 지정함.
    * getEngineUrl() legacy 단일 slot 방식 금지 — getEngineUrlByGroupSubject(groupId, 1) 사용함.
