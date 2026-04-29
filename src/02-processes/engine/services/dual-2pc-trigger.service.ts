@@ -250,9 +250,6 @@ async function callWithRetry(
   }
 }
 
-// ===== startup listener 멱등 guard (LD-32) =====
-let listenersRegistered = false;
-
 // ===== 공개 서비스 객체 =====
 
 export const dualTriggerService: DualTriggerService = {
@@ -459,14 +456,3 @@ export const dualTriggerService: DualTriggerService = {
     await dualTriggerService.triggerAssignGroup(groupId, subjects);
   },
 };
-
-/**
- * BE startup 시 pairing + operator-join listener를 등록함.
- * LD-32: 중복 호출 시 idempotent 처리됨.
- * 호출 위치: src/01-app/app.ts의 connectDB() 내부, MongoDB 연결 직후 (LD-23).
- */
-export function registerPairingTriggerListener(): boolean {
-  if (listenersRegistered) return false;
-  listenersRegistered = true;
-  return true;
-}

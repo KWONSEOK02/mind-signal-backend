@@ -447,11 +447,18 @@ describe('dualTriggerService — Phase 17.6', () => {
     jest.mock('@06-entities/sessions', () => ({
       Session: { find: jest.fn() },
     }));
+    jest.mock('@05-features/sessions/services/pairing.service', () => ({
+      addPairingCompleteListener: jest.fn(),
+    }));
+    jest.mock('@05-features/sessions/services/join-operator.service', () => ({
+      addOperatorJoinListener: jest.fn(),
+    }));
 
-    const freshModule = await import('./dual-2pc-trigger.service');
+    const { registerPairingTriggerListener } =
+      await import('@01-app/startup-listeners');
 
-    const result1 = freshModule.registerPairingTriggerListener();
-    const result2 = freshModule.registerPairingTriggerListener();
+    const result1 = registerPairingTriggerListener();
+    const result2 = registerPairingTriggerListener();
 
     // 1회차: 등록 성공 → true
     expect(result1).toBe(true);
