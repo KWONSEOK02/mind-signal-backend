@@ -3,6 +3,29 @@ import { Session } from '@06-entities/sessions';
 import { AppError } from '@07-shared/errors';
 import { config } from '@07-shared/config/config';
 
+// ===== operator join 완료 listener registry =====
+
+type OperatorJoinCallback = (data: { groupId: string }) => void | Promise<void>;
+const operatorJoinListeners = new Set<OperatorJoinCallback>();
+
+/**
+ * operator join 완료 시 호출될 콜백 등록함.
+ *
+ * @param cb - groupId를 받는 콜백 함수
+ */
+export function addOperatorJoinListener(cb: OperatorJoinCallback): void {
+  operatorJoinListeners.add(cb);
+}
+
+/**
+ * operator join 완료 콜백 등록 해제함.
+ *
+ * @param cb - 제거할 콜백 함수
+ */
+export function removeOperatorJoinListener(cb: OperatorJoinCallback): void {
+  operatorJoinListeners.delete(cb);
+}
+
 /**
  * [Service] operator join 프로세스 수행함.
  *
@@ -41,6 +64,15 @@ export async function joinAsOperator(token: string): Promise<{
   const sessions = await Session.find({ groupId });
   if (sessions.length === 0) {
     throw new AppError('세션을 찾을 수 없습니다.', 404);
+  }
+
+  // operator join 완료 listener 호출 (LD-12 대안 D)
+  for (const cb of operatorJoinListeners) {
+    try {
+      await cb({ groupId });
+    } catch (err) {
+      console.error('operatorJoinListener 에러:', err);
+    }
   }
 
   return { groupId, experimentMode: 'DUAL_2PC' };
