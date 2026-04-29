@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { engineRegistryService } from '../services/engine-registry.service';
 import { engineProxyService } from '../services/engine-proxy.service';
+import { dualTriggerService } from '../services/dual-2pc-trigger.service';
 import { stopMeasurementService } from '@02-processes/measurements/services/measurement.service';
 import { AppError } from '@07-shared/errors';
 import { SocketService } from '@07-shared/lib/socket';
@@ -186,6 +187,64 @@ export const engineController = {
       res.status(200).json({ ...engineResult, allCompleted });
     } catch (error) {
       next(error);
+    }
+  },
+
+  /** registry 상태 snapshot 반환함 (FE polling 용) */
+  getRegistryStatus: (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const groupId = req.query.groupId as string;
+      if (!groupId || typeof groupId !== 'string') {
+        throw new AppError('groupId 쿼리 필수', 400);
+      }
+      const status = dualTriggerService.getRegistryStatus(groupId);
+      res.status(200).json(status);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /** 양쪽 DE에 assign-group 트리거 요청 처리함 */
+  dualTrigger: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { groupId } = req.body;
+      const subjects = await dualTriggerService.collectPendingSubjects(groupId);
+      if (subjects.length !== 2) {
+        throw new AppError('양쪽 DE 모두 pending 상태가 아님', 503);
+      }
+      const result = await dualTriggerService.triggerAssignGroup(
+        groupId,
+        subjects
+      );
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /** DE startup pending 등록 처리함 */
+  registerPending: (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { subjectIndex, engineUrl, secretKey } = req.body;
+      engineRegistryService.registerPending(subjectIndex, engineUrl, secretKey);
+      res.status(200).json({ status: 'registered' });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /** DE 종료 시 pending entry 삭제 처리함 */
+  unregisterPending: (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { subjectIndex, engineUrl, secretKey } = req.body;
+      engineRegistryService.unregisterPending(
+        subjectIndex,
+        engineUrl,
+        secretKey
+      );
+      res.status(200).json({ deleted: true });
+    } catch (err) {
+      next(err);
     }
   },
 
