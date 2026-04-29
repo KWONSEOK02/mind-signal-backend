@@ -201,6 +201,8 @@ function startDualMeasurement(groupId: string): void {
         timestamp_ms: Date.now(),
       });
     } catch (err) {
+      // T4 fix: 반쪽 등록 잔류 방지 — dualRegistry cleanup 호출함 (LD-4)
+      engineRegistryService.cleanupGroup(groupId);
       // 실패 통보 (60초 timeout + streamStart 실패 포함)
       SocketService.emitToGroup(groupId, 'dual-session-failed', {
         groupId,
