@@ -19,6 +19,15 @@ interface EngineRegistration {
   registeredAt: number;
 }
 
+// ===== Phase 17.6 — pending registry (LD-10) =====
+/** subjectIndex → pending entry (groupId 미정 상태) */
+interface PendingEntry {
+  url: string;
+  registeredAt: number;
+}
+
+const pendingRegistry = new Map<1 | 2, PendingEntry>();
+
 export const engineRegistryService = {
   // ===== 기존 메서드 — backward compat 유지 (engine-proxy.service.ts 5곳 호출 보존) =====
 
@@ -157,5 +166,57 @@ export const engineRegistryService = {
     dualRegistry.delete(groupId);
     registeredCallbacks.delete(groupId);
     console.log(`DUAL_2PC 엔진 레지스트리 정리 완료: groupId=${groupId}`);
+  },
+
+  // ===== Phase 17.6 — pending registry 메서드 (LD-10, LD-16, LD-26) =====
+
+  /**
+   * DE startup 시 본인 ngrok/LAN URL을 BE에 사전 등록함.
+   * groupId 미정 상태에서 호출됨 (assign-group 전).
+   *
+   * @param subjectIndex - 피실험자 순번 (1-based: 1 또는 2)
+   * @param url - DE의 ngrok 또는 LAN URL
+   * @param secretKey - 검증용 시크릿 키
+   * @throws AppError 403 — secretKey 불일치 시
+   */
+  registerPending(subjectIndex: 1 | 2, url: string, secretKey: string): void {
+    if (secretKey !== config.dataEngine.secretKey) {
+      throw new AppError('유효하지 않은 시크릿 키입니다.', 403);
+    }
+    pendingRegistry.set(subjectIndex, { url, registeredAt: Date.now() });
+    console.log(`pending 등록 완료: subjectIndex=${subjectIndex}, url=${url}`);
+  },
+
+  /**
+   * pending 상태인 양쪽 DE 정보 반환함.
+   *
+   * @returns subjectIndex + url 배열 (최대 2개)
+   */
+  getPendingSubjects(): Array<{ subjectIndex: 1 | 2; url: string }> {
+    const result: Array<{ subjectIndex: 1 | 2; url: string }> = [];
+    for (const [subjectIndex, entry] of pendingRegistry.entries()) {
+      result.push({ subjectIndex, url: entry.url });
+    }
+    return result;
+  },
+
+  /**
+   * DE process 종료 시 pending entry 삭제함. 멱등 동작 보장.
+   *
+   * @param subjectIndex - 삭제할 피실험자 순번
+   * @param url - 등록 시 사용한 URL (검증용)
+   * @param secretKey - 검증용 시크릿 키
+   * @throws AppError 403 — secretKey 불일치 시
+   */
+  unregisterPending(subjectIndex: 1 | 2, url: string, secretKey: string): void {
+    if (secretKey !== config.dataEngine.secretKey) {
+      throw new AppError('유효하지 않은 시크릿 키입니다.', 403);
+    }
+    const entry = pendingRegistry.get(subjectIndex);
+    if (entry && entry.url === url) {
+      pendingRegistry.delete(subjectIndex);
+      console.log(`pending 삭제 완료: subjectIndex=${subjectIndex}`);
+    }
+    // entry 없으면 idempotent — 아무 동작 안 함
   },
 };

@@ -481,4 +481,46 @@ router.post(
   engineController.stopAll
 );
 
+// ===== Phase 17.6 — DUAL_2PC trigger gap hotfix 라우트 (LD-31) =====
+
+// registry 상태 snapshot 조회 (FE polling 용)
+router.get('/registry-status', engineController.getRegistryStatus);
+
+// 양쪽 DE에 assign-group 트리거 요청 처리함
+const dualTriggerSchema = z.object({
+  groupId: z.string().min(1),
+});
+
+router.post(
+  '/dual-trigger',
+  validate(dualTriggerSchema),
+  engineController.dualTrigger
+);
+
+// DE startup pending 등록 처리함
+const registerPendingSchema = z.object({
+  subjectIndex: z.union([z.literal(1), z.literal(2)]),
+  engineUrl: z.string().url(),
+  secretKey: z.string().min(1),
+});
+
+router.post(
+  '/register-pending',
+  validate(registerPendingSchema),
+  engineController.registerPending
+);
+
+// DE 종료 시 pending entry 삭제 처리함
+const unregisterPendingSchema = z.object({
+  subjectIndex: z.union([z.literal(1), z.literal(2)]),
+  engineUrl: z.string().url(),
+  secretKey: z.string().min(1),
+});
+
+router.delete(
+  '/register-pending',
+  validate(unregisterPendingSchema),
+  engineController.unregisterPending
+);
+
 export default router;

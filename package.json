@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "dist/01-app/app.js",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.10.0"
   },
   "scripts": {
     "dev": "open-cli http://localhost:5000/api-docs && ts-node-dev --respawn --transpile-only -r tsconfig-paths/register ./src/01-app/app.ts",
