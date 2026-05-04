@@ -4,6 +4,32 @@ import mongoose from 'mongoose';
 import { AppError } from '@07-shared/errors';
 import crypto from 'crypto';
 
+// ===== 페어링 완료 listener registry =====
+
+type PairingCallback = (data: {
+  groupId: string;
+  subjectIndex: number | null;
+}) => void | Promise<void>;
+const pairingListeners = new Set<PairingCallback>();
+
+/**
+ * 페어링 완료 시 호출될 콜백 등록함.
+ *
+ * @param cb - groupId + subjectIndex를 받는 콜백 함수
+ */
+export function addPairingCompleteListener(cb: PairingCallback): void {
+  pairingListeners.add(cb);
+}
+
+/**
+ * 페어링 완료 콜백 등록 해제함.
+ *
+ * @param cb - 제거할 콜백 함수
+ */
+export function removePairingCompleteListener(cb: PairingCallback): void {
+  pairingListeners.delete(cb);
+}
+
 /**
  * [Service] 운영자용 그룹 세션 생성 프로세스 정의함
  * $inc 원자적 연산으로 동시 요청 시에도 고유한 subjectIndex 보장함
@@ -92,5 +118,21 @@ export const pairDeviceProcess = async (
   session.userId = new Types.ObjectId(userId);
   session.pairedAt = new Date();
 
-  return await session.save();
+  // RC5-H-3 fix: return await 단일 expr 분리 필수
+  const saved = await session.save();
+
+  // 페어링 완료 listener 호출 (LD-12 대안 D)
+  // fire-and-forget — listener 내부 retry/timeout이 응답 블로킹 방지함
+  for (const cb of pairingListeners) {
+    void Promise.resolve(
+      cb({
+        groupId: session.groupId,
+        subjectIndex: session.subjectIndex,
+      })
+    ).catch((err) => {
+      console.error('pairingListener 에러:', err);
+    });
+  }
+
+  return saved;
 };
