@@ -67,12 +67,11 @@ export async function joinAsOperator(token: string): Promise<{
   }
 
   // operator join 완료 listener 호출 (LD-12 대안 D)
+  // fire-and-forget — listener 내부 retry/timeout이 응답 블로킹 방지함
   for (const cb of operatorJoinListeners) {
-    try {
-      await cb({ groupId });
-    } catch (err) {
+    void Promise.resolve(cb({ groupId })).catch((err) => {
       console.error('operatorJoinListener 에러:', err);
-    }
+    });
   }
 
   return { groupId, experimentMode: 'DUAL_2PC' };

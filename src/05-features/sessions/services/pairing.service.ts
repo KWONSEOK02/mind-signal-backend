@@ -122,15 +122,16 @@ export const pairDeviceProcess = async (
   const saved = await session.save();
 
   // 페어링 완료 listener 호출 (LD-12 대안 D)
+  // fire-and-forget — listener 내부 retry/timeout이 응답 블로킹 방지함
   for (const cb of pairingListeners) {
-    try {
-      await cb({
+    void Promise.resolve(
+      cb({
         groupId: session.groupId,
         subjectIndex: session.subjectIndex,
-      });
-    } catch (err) {
+      })
+    ).catch((err) => {
       console.error('pairingListener 에러:', err);
-    }
+    });
   }
 
   return saved;

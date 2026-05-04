@@ -38,6 +38,7 @@ jest.mock('@06-entities/sessions', () => ({
 }));
 
 // ===== 전역 fetch mock =====
+const originalFetch = global.fetch;
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
@@ -116,6 +117,11 @@ describe('dualTriggerService — Phase 17.6', () => {
   afterEach(() => {
     jest.clearAllMocks();
     jest.clearAllTimers();
+  });
+
+  afterAll(() => {
+    // 전역 fetch 원복 — 테스트 파일 간 상태 누수 방지함
+    global.fetch = originalFetch;
   });
 
   // ============================================================
