@@ -6,10 +6,7 @@
  */
 
 import { Types } from 'mongoose';
-import {
-  SessionAggregate,
-  SessionRepository,
-} from '@06-entities/sessions';
+import { SessionAggregate, SessionRepository } from '@06-entities/sessions';
 import { AppError } from '@07-shared/errors';
 import { PairSubjectService } from './pair-subject.service';
 

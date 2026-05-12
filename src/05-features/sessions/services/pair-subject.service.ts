@@ -64,10 +64,7 @@ export class PairSubjectService {
     // 2. 토큰으로 직접 조회 (기존 Session.findOne({pairingToken}) 어댑터)
     const aggregate = await this.repo.findByPairingToken(input.pairingToken);
     if (!aggregate) {
-      throw new AppError(
-        '존재하지 않거나 유효하지 않은 토큰입니다',
-        404
-      );
+      throw new AppError('존재하지 않거나 유효하지 않은 토큰입니다', 404);
     }
 
     // 3. 도메인 메서드 호출 — 만료/전이 invariant 강제

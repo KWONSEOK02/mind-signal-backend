@@ -90,9 +90,7 @@ export class SessionAggregate {
   }
 
   /** DB 도큐먼트 → 통합체 변환 — Repository 내부에서만 호출함 */
-  static fromDocument(
-    doc: SessionAggregateDocumentFields
-  ): SessionAggregate {
+  static fromDocument(doc: SessionAggregateDocumentFields): SessionAggregate {
     return new SessionAggregate(
       doc._id,
       doc.groupId,

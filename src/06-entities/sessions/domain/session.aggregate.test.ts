@@ -12,7 +12,9 @@ import {
 } from './errors';
 
 describe('SessionAggregate', () => {
-  const baseParams = (override: Partial<Parameters<typeof SessionAggregate.create>[0]> = {}) => ({
+  const baseParams = (
+    override: Partial<Parameters<typeof SessionAggregate.create>[0]> = {}
+  ) => ({
     id: 'session-id-1',
     groupId: 'A1B2C3D4',
     subjectIndex: 1,

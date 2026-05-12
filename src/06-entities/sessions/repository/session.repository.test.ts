@@ -54,7 +54,10 @@ const makeAggregate = (
  * Mongoose SessionDoc-like 객체 생성기 — Repository.toAggregate가 읽는 필드만 포함함.
  * 실제 Mongoose Hydration 결과를 mock 형태로 모사함.
  */
-const makeDocLike = (aggregate: SessionAggregate, statusOverride?: SessionAggregate['status']) => ({
+const makeDocLike = (
+  aggregate: SessionAggregate,
+  statusOverride?: SessionAggregate['status']
+) => ({
   _id: aggregate.id,
   groupId: aggregate.groupId,
   subjectIndex: aggregate.subjectIndex,

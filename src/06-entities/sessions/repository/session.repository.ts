@@ -74,9 +74,7 @@ export class SessionRepository {
    * SessionAggregate → Mongoose 도큐먼트 갱신 필드로 변환함.
    * save()는 본 결과만, saveNew()는 본 결과 + pairingToken/expiresAt/experimentMode 추가.
    */
-  private toDocumentFields(
-    aggregate: SessionAggregate
-  ): {
+  private toDocumentFields(aggregate: SessionAggregate): {
     groupId: string;
     subjectIndex: number;
     creatorId: Types.ObjectId | null;

@@ -14,10 +14,7 @@
  */
 
 import { Types } from 'mongoose';
-import {
-  SessionAggregate,
-  SessionRepository,
-} from '@06-entities/sessions';
+import { SessionAggregate, SessionRepository } from '@06-entities/sessions';
 import { AppError } from '@07-shared/errors';
 import { PairSubjectService } from '../services/pair-subject.service';
 
@@ -33,7 +30,7 @@ const makeInMemoryRepo = () => {
     findById: jest.fn(async (id: string) => store.get(id) ?? null),
     findByPairingToken: jest.fn(async (token: string) => {
       const id = tokenIndex.get(token);
-      return id ? store.get(id) ?? null : null;
+      return id ? (store.get(id) ?? null) : null;
     }),
     save: jest.fn(async (aggregate: SessionAggregate) => {
       store.set(aggregate.id, aggregate);
