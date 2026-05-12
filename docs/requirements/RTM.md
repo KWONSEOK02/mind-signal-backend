@@ -31,6 +31,7 @@
 | FR ID | Title | Source | Implementation | Tests | PR | Status |
 |---|---|---|---|---|---|---|
 | FR-00 | (예시) 세션 생성 API | #0 | `src/05-features/sessions/api/session.routes.ts` | `__tests__/sessions/create.test.ts` | — | Draft |
+| DR-G | Session Aggregate DDD/BDD/TDD Pilot | `.plans/PRD.md` DR-G + `.plans/G-mind-signal-ddd-bdd-tdd/` | `src/06-entities/sessions/{domain,repository,types}` + `src/05-features/sessions/services/pair-subject.service.ts` | `session.aggregate.test.ts` (8) + `session.repository.test.ts` (5) + `pair-subject.service.test.ts` (5) + `pair-subject.bdd.test.ts` (3) = 21 | feat/G-ddd-bdd-tdd-pilot | Done (ADR-006 Accepted) |
 
 ---
 
