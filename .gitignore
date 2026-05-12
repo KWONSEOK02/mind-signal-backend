@@ -24,8 +24,10 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Claude Code (개인 설정)
-.claude/
+# Claude Code (개인 설정 — 단, Phase G가 박제한 vendored skills는 예외)
+.claude/*
+!.claude/skills/
+!.claude/skills/**
 
 # 기밀/임시 파일
 secret.txt
