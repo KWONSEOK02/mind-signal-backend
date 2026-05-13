@@ -6,6 +6,7 @@ import {
 import { submitConsentProcess } from '@05-features/sessions/services/submit-consent.service';
 import { createOperatorInviteToken } from '@05-features/sessions/services/invite-operator.service';
 import { joinAsOperator } from '@05-features/sessions/services/join-operator.service';
+import { adminPairDeviceProcess } from '@05-features/sessions/services/admin-pair.service';
 import { AppError } from '@07-shared/errors';
 import {
   pairDeviceSchema,
@@ -129,6 +130,36 @@ export const pairDevice = async (
       status: 'success',
       data: session,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * [Controller] 관리자 강제 페어링 처리함.
+ *
+ * @throws AppError 401 — admin/타겟 user 미존재
+ * @throws AppError 403 — 관리자 권한 없음
+ * @throws AppError 404 — target email DB 미존재
+ */
+export const adminPairDevice = async (
+  req: AuthedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { pairingToken } = req.params;
+    // validate middleware가 body를 adminPairSchema로 parse 후 교체함
+    const { email } = req.body as { email: string };
+
+    if (!req.user || !req.user.id) {
+      throw new AppError('인증이 필요한 서비스입니다.', 401);
+    }
+    const adminId = req.user.id;
+
+    const session = await adminPairDeviceProcess(pairingToken, email, adminId);
+
+    res.status(200).json({ status: 'success', data: session });
   } catch (error) {
     next(error);
   }
