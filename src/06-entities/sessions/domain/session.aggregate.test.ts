@@ -11,6 +11,9 @@ import {
   InvalidStatusTransitionError,
 } from './errors';
 
+/** ADR-007 정합 — wall clock 의존 제거, 결정성 보장 */
+const TEST_NOW = new Date('2026-05-13T10:00:00.000Z');
+
 describe('SessionAggregate', () => {
   const baseParams = (
     override: Partial<Parameters<typeof SessionAggregate.create>[0]> = {}
@@ -21,7 +24,7 @@ describe('SessionAggregate', () => {
     pairingToken: 'TOK001',
     operatorId: 'operator-1',
     mode: 'SEQUENTIAL' as const,
-    expiresAt: new Date(Date.now() + 60_000), // 1분 뒤 만료
+    expiresAt: new Date(TEST_NOW.getTime() + 60_000), // TEST_NOW 기준 1분 뒤 만료
     ...override,
   });
 
@@ -56,26 +59,23 @@ describe('SessionAggregate', () => {
   });
 
   describe('pair()', () => {
-    test('4. happy path — CREATED + 미만료 → PAIRED + userId 바인딩', () => {
+    test('4. happy path — CREATED + 미만료 → PAIRED + userId 바인딩 + pairedAt = now (참조 동등성)', () => {
       const aggregate = SessionAggregate.create(baseParams());
       const userId = 'user-bob';
-      const before = Date.now();
-      aggregate.pair(userId);
-      const after = Date.now();
+      const now = TEST_NOW;
+      aggregate.pair(userId, now);
 
       expect(aggregate.status).toBe('PAIRED');
       expect(aggregate.userId).toBe(userId);
-      expect(aggregate.pairedAt).not.toBeNull();
-      const pairedTime = aggregate.pairedAt!.getTime();
-      expect(pairedTime).toBeGreaterThanOrEqual(before);
-      expect(pairedTime).toBeLessThanOrEqual(after);
+      // ADR-007 정합 — _pairedAt이 주입된 now와 동일 객체 (참조 동등성)
+      expect(aggregate.pairedAt).toBe(now);
     });
 
-    test('5. 실패 — isExpired() === true → InvalidStatusTransitionError', () => {
-      const aggregate = SessionAggregate.create(
-        baseParams({ expiresAt: new Date(Date.now() - 1000) }) // 이미 만료됨
-      );
-      expect(() => aggregate.pair('user-bob')).toThrow(
+    test('5. 실패 — isExpired(now) === true → InvalidStatusTransitionError', () => {
+      const expiresAt = new Date('2026-05-13T10:00:00.000Z');
+      const now = new Date(expiresAt.getTime() + 1000); // 1초 후 (만료됨)
+      const aggregate = SessionAggregate.create(baseParams({ expiresAt }));
+      expect(() => aggregate.pair('user-bob', now)).toThrow(
         InvalidStatusTransitionError
       );
       // 상태는 그대로 CREATED (만료 처리는 별도 expire() 호출 책임)
@@ -84,8 +84,9 @@ describe('SessionAggregate', () => {
 
     test('6. 실패 — status === PAIRED에서 재호출 → InvalidStatusTransitionError', () => {
       const aggregate = SessionAggregate.create(baseParams());
-      aggregate.pair('user-bob');
-      expect(() => aggregate.pair('user-charlie')).toThrow(
+      const now = TEST_NOW;
+      aggregate.pair('user-bob', now);
+      expect(() => aggregate.pair('user-charlie', now)).toThrow(
         InvalidStatusTransitionError
       );
       // userId는 첫 페어링 그대로 유지됨
@@ -104,9 +105,26 @@ describe('SessionAggregate', () => {
 
     test('8. cancel() happy — PAIRED에서 CANCELLED 전이', () => {
       const aggregate = SessionAggregate.create(baseParams());
-      aggregate.pair('user-bob');
+      const now = TEST_NOW;
+      aggregate.pair('user-bob', now);
       aggregate.cancel('ManualEarly');
       expect(aggregate.status).toBe('CANCELLED');
+    });
+
+    test('9. isExpired(now) — boundary 비교 (ADR-007 정합)', () => {
+      const expiresAt = new Date('2026-05-13T10:00:00.000Z');
+      const aggregate = SessionAggregate.create(baseParams({ expiresAt }));
+
+      // boundary 직전 — 미만료
+      const beforeBoundary = new Date(expiresAt.getTime() - 1);
+      expect(aggregate.isExpired(beforeBoundary)).toBe(false);
+
+      // boundary 정확 — expiresAt === now 시점은 미만료 (strict less than)
+      expect(aggregate.isExpired(expiresAt)).toBe(false);
+
+      // boundary 직후 — 만료
+      const afterBoundary = new Date(expiresAt.getTime() + 1);
+      expect(aggregate.isExpired(afterBoundary)).toBe(true);
     });
   });
 });

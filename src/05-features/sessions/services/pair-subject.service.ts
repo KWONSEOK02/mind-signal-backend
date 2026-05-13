@@ -27,6 +27,7 @@ import {
 } from '@06-entities/sessions';
 import type { SessionPairedEvent } from '@06-entities/sessions';
 import { AppError } from '@07-shared/errors';
+import type { Clock } from '@07-shared/clock';
 
 /** PairSubjectService.execute() 입력 인자 */
 export interface PairSubjectInput {
@@ -42,10 +43,16 @@ export interface PairSubjectResult {
 
 export class PairSubjectService {
   private readonly repo: SessionRepository;
+  private readonly clock: Clock;
   private recordedEvents: SessionPairedEvent[] = [];
 
-  constructor(repo?: SessionRepository) {
-    this.repo = repo ?? new SessionRepository();
+  /**
+   * @param repo SessionRepository 어댑터 — 영속화 경유함 (required, A-6 soft seam 해소)
+   * @param clock Clock port — 한 execute() 호출 내 시간 결정성 보장 (ADR-007)
+   */
+  constructor(repo: SessionRepository, clock: Clock) {
+    this.repo = repo;
+    this.clock = clock;
   }
 
   /**
@@ -67,13 +74,17 @@ export class PairSubjectService {
       throw new AppError('존재하지 않거나 유효하지 않은 토큰입니다', 404);
     }
 
+    // 2.5. Clock 1회 관찰 — 본 호출의 모든 시간 판단에 동일 Date snapshot 사용함 (ADR-007)
+    const now = this.clock.now();
+
     // 3. 도메인 메서드 호출 — 만료/전이 invariant 강제
     try {
-      aggregate.pair(input.userId);
+      aggregate.pair(input.userId, now);
     } catch (err) {
       if (err instanceof InvalidStatusTransitionError) {
         // 만료 시 EXPIRED 영속화 + 401 throw (기존 pairing.service.ts L101-105 정합)
-        if (aggregate.isExpired()) {
+        // race 차단 — 동일 `now`를 isExpired에 전달하여 pair() 내부 판단과 결정성 유지함
+        if (aggregate.isExpired(now)) {
           aggregate.expire();
           await this.repo.save(aggregate);
           throw new AppError(
@@ -94,11 +105,12 @@ export class PairSubjectService {
     await this.repo.save(aggregate);
 
     // 5. 도메인 이벤트 메모리 기록 (LD-12 listener 통합은 후속 controller 통합 PR로 분리함)
+    // event.occurredAt도 동일 `now`를 사용함 — 한 호출 = 한 timestamp 결정성
     const event: SessionPairedEvent = {
       type: 'SessionPaired',
       sessionId: aggregate.id,
       userId: input.userId,
-      occurredAt: new Date().toISOString(),
+      occurredAt: now.toISOString(),
       groupId: aggregate.groupId,
       subjectIndex: aggregate.subjectIndex,
       mode: aggregate.mode,

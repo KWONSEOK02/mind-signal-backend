@@ -16,7 +16,11 @@
 import { Types } from 'mongoose';
 import { SessionAggregate, SessionRepository } from '@06-entities/sessions';
 import { AppError } from '@07-shared/errors';
+import { FixedClock } from '@07-shared/clock';
 import { PairSubjectService } from '../services/pair-subject.service';
+
+/** BDD 시나리오 결정성용 고정 시각 — ADR-007 정합 */
+const TEST_NOW = new Date('2026-05-13T10:00:00.000Z');
 
 /**
  * 테스트 환경 헬퍼 — SessionRepository를 in-memory Map으로 모킹함.
@@ -62,13 +66,13 @@ describe('Feature: 피실험자가 QR을 스캔해 세션에 합류함', () => {
           pairingToken: 'TOK001',
           operatorId,
           mode: 'SEQUENTIAL',
-          expiresAt: new Date(Date.now() + 60_000),
+          expiresAt: new Date(TEST_NOW.getTime() + 60_000),
         });
         await repo.saveNew(session);
 
         // When — subject bob (userId)이 pairingToken 'TOK001'로 합류 요청을 보냄
         const userId = new Types.ObjectId().toString();
-        const service = new PairSubjectService(repo);
+        const service = new PairSubjectService(repo, new FixedClock(TEST_NOW));
         const result = await service.execute({
           pairingToken: 'TOK001',
           userId,
@@ -109,13 +113,13 @@ describe('Feature: 피실험자가 QR을 스캔해 세션에 합류함', () => {
           pairingToken: 'EXP001',
           operatorId,
           mode: 'SEQUENTIAL',
-          expiresAt: new Date(Date.now() - 1000), // 1초 전에 만료됨
+          expiresAt: new Date(TEST_NOW.getTime() - 1000), // TEST_NOW 기준 1초 전 만료
         });
         await repo.saveNew(expiredSession);
 
         // When — subject가 만료된 토큰으로 합류 시도함
         const userId = new Types.ObjectId().toString();
-        const service = new PairSubjectService(repo);
+        const service = new PairSubjectService(repo, new FixedClock(TEST_NOW));
 
         // Then — AppError 401 throw
         let captured: AppError | null = null;
@@ -151,12 +155,12 @@ describe('Feature: 피실험자가 QR을 스캔해 세션에 합류함', () => {
           pairingToken: 'PRD001',
           operatorId,
           mode: 'SEQUENTIAL',
-          expiresAt: new Date(Date.now() + 60_000),
+          expiresAt: new Date(TEST_NOW.getTime() + 60_000),
         });
         await repo.saveNew(session);
 
         // 첫 번째 페어링 성공
-        const service = new PairSubjectService(repo);
+        const service = new PairSubjectService(repo, new FixedClock(TEST_NOW));
         await service.execute({
           pairingToken: 'PRD001',
           userId: firstUserId,

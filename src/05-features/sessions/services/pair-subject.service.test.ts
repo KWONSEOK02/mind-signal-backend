@@ -8,7 +8,10 @@
 import { Types } from 'mongoose';
 import { SessionAggregate, SessionRepository } from '@06-entities/sessions';
 import { AppError } from '@07-shared/errors';
+import { FixedClock } from '@07-shared/clock';
 import { PairSubjectService } from './pair-subject.service';
+
+const TEST_NOW = new Date('2026-05-13T10:00:00.000Z');
 
 const makeAggregate = (
   override: Partial<Parameters<typeof SessionAggregate.create>[0]> = {}
@@ -20,7 +23,7 @@ const makeAggregate = (
     pairingToken: 'TOK001',
     operatorId: new Types.ObjectId().toString(),
     mode: 'SEQUENTIAL',
-    expiresAt: new Date(Date.now() + 60_000),
+    expiresAt: new Date(TEST_NOW.getTime() + 60_000),
     ...override,
   });
 };
@@ -44,7 +47,7 @@ describe('PairSubjectService', () => {
     const repo = makeRepoMock();
     repo.findByPairingToken.mockResolvedValueOnce(aggregate);
 
-    const service = new PairSubjectService(repo);
+    const service = new PairSubjectService(repo, new FixedClock(TEST_NOW));
     const result = await service.execute({
       pairingToken: 'TOK001',
       userId,
@@ -68,13 +71,13 @@ describe('PairSubjectService', () => {
 
   test('2. 만료 토큰 → AppError 401 throw + 세션 status EXPIRED 영속', async () => {
     const expired = makeAggregate({
-      expiresAt: new Date(Date.now() - 1000), // 이미 만료됨
+      expiresAt: new Date(TEST_NOW.getTime() - 1000), // TEST_NOW 기준 1초 전 만료
     });
     const userId = new Types.ObjectId().toString();
     const repo = makeRepoMock();
     repo.findByPairingToken.mockResolvedValueOnce(expired);
 
-    const service = new PairSubjectService(repo);
+    const service = new PairSubjectService(repo, new FixedClock(TEST_NOW));
 
     let captured: AppError | null = null;
     try {
@@ -92,14 +95,14 @@ describe('PairSubjectService', () => {
 
   test('3. 이미 PAIRED 상태 토큰 → AppError 400 throw', async () => {
     const aggregate = makeAggregate();
-    aggregate.pair(new Types.ObjectId().toString()); // 사전 페어링 완료
+    aggregate.pair(new Types.ObjectId().toString(), TEST_NOW); // 사전 페어링 완료 (plan-review I-2: Date 인자 추가)
     expect(aggregate.status).toBe('PAIRED');
 
     const userId = new Types.ObjectId().toString();
     const repo = makeRepoMock();
     repo.findByPairingToken.mockResolvedValueOnce(aggregate);
 
-    const service = new PairSubjectService(repo);
+    const service = new PairSubjectService(repo, new FixedClock(TEST_NOW));
 
     let captured: AppError | null = null;
     try {
@@ -119,7 +122,7 @@ describe('PairSubjectService', () => {
     const repo = makeRepoMock();
     repo.findByPairingToken.mockResolvedValueOnce(null);
 
-    const service = new PairSubjectService(repo);
+    const service = new PairSubjectService(repo, new FixedClock(TEST_NOW));
 
     let captured: AppError | null = null;
     try {
@@ -135,7 +138,7 @@ describe('PairSubjectService', () => {
 
   test('보조: userId 형식 부정합 → AppError 400 throw + repo 호출 0건', async () => {
     const repo = makeRepoMock();
-    const service = new PairSubjectService(repo);
+    const service = new PairSubjectService(repo, new FixedClock(TEST_NOW));
 
     let captured: AppError | null = null;
     try {
