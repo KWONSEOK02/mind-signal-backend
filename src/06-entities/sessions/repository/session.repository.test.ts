@@ -120,7 +120,7 @@ describe('SessionRepository (통합 — Mongoose Model mock)', () => {
   test('3. save 상태 전이 영속 (CREATED → PAIRED)', async () => {
     const aggregate = makeAggregate();
     const userId = new Types.ObjectId().toString();
-    aggregate.pair(userId);
+    aggregate.pair(userId, new Date()); // ADR-007 정합 — Date 인자 전달
 
     SessionMock.findByIdAndUpdate.mockResolvedValueOnce(makeDocLike(aggregate));
     await repo.save(aggregate);

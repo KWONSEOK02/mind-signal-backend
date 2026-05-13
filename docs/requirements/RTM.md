@@ -32,6 +32,7 @@
 |---|---|---|---|---|---|---|
 | FR-00 | (예시) 세션 생성 API | #0 | `src/05-features/sessions/api/session.routes.ts` | `__tests__/sessions/create.test.ts` | — | Draft |
 | DR-G | Session Aggregate DDD/BDD/TDD Pilot | `.plans/PRD.md` DR-G + `.plans/G-mind-signal-ddd-bdd-tdd/` | `src/06-entities/sessions/{domain,repository,types}` + `src/05-features/sessions/services/pair-subject.service.ts` | `session.aggregate.test.ts` (8) + `session.repository.test.ts` (5) + `pair-subject.service.test.ts` (5) + `pair-subject.bdd.test.ts` (3) = 21 | feat/G-ddd-bdd-tdd-pilot | Done (ADR-006 Accepted) |
+| DR-G-PR-A7 | Clock Port at Session Pairing Seam — A-7 race 차단 + A-6 soft seam 동반 해소 | 이슈 #52 + `.plans/I-pr-a7-clock-port/` + `.plans/H-deep-module-poc/RESULT.md` | `src/07-shared/clock/{clock,system-clock,fixed-clock,index}.ts` 신규 + `src/06-entities/sessions/domain/session.aggregate.ts` (pair/isExpired Date 인자) + `src/05-features/sessions/services/pair-subject.service.ts` (constructor required + now 1회 관찰) | `clock.test.ts` (4) + `session.aggregate.test.ts` (9, +boundary) + `session.repository.test.ts` (5) + `pair-subject.service.test.ts` (5) + `pair-subject.bdd.test.ts` (8, +S4 A/B/C +S5 ×2) = 31 | feat/52-clock-port-race-fix | Done (ADR-007 Accepted) |
 
 ---
 

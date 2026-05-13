@@ -108,10 +108,16 @@ export class SessionAggregate {
   /**
    * 피실험자를 세션에 연결함 — CREATED → PAIRED 전이.
    *
+   * 호출자는 `now` Date를 1회 관찰하여 본 메서드 + `isExpired` + event timestamp에
+   * 동일 Date를 전달함. ADR-007 정합 — race condition 차단을 위해 한 호출 단위 내
+   * 시간 결정성 유지함.
+   *
+   * @param userId 페어링할 피실험자 ID
+   * @param now 호출자가 1회 관찰한 현재 시각
    * @throws InvalidStatusTransitionError 만료(isExpired) 또는 status !== 'CREATED'
    */
-  pair(userId: string): void {
-    if (this.isExpired()) {
+  pair(userId: string, now: Date): void {
+    if (this.isExpired(now)) {
       throw new InvalidStatusTransitionError(this._status, 'EXPIRED');
     }
     if (this._status !== 'CREATED') {
@@ -119,7 +125,7 @@ export class SessionAggregate {
     }
     this._status = 'PAIRED';
     this._userId = userId;
-    this._pairedAt = new Date();
+    this._pairedAt = now;
   }
 
   /** PAIRED → MEASURING — 본 단계 시연 외, 메서드 골조만 */
@@ -158,9 +164,14 @@ export class SessionAggregate {
     this._status = 'CANCELLED';
   }
 
-  /** 만료 여부 — expiresAt < 현재 시각 */
-  isExpired(): boolean {
-    return this._expiresAt.getTime() < Date.now();
+  /**
+   * 만료 여부 — expiresAt < 주입된 시각.
+   *
+   * 호출자가 1회 관찰한 `now`를 전달함. SA가 자체 `Date.now()`를 호출하지 않으므로
+   * 호출 단위 내 시간 결정성 보장 + test에서 FixedClock 주입으로 분기 결정적 재현 가능.
+   */
+  isExpired(now: Date): boolean {
+    return this._expiresAt.getTime() < now.getTime();
   }
 
   // ===== getters =====
