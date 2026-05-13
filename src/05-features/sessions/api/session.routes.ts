@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import * as sessionsController from './session.controller';
 import { authenticate, validate } from '@07-shared/middlewares'; // 인증 및 Zod body 검증 미들웨어
+import { requireAdmin } from '../middlewares/require-admin.middleware'; // K phase admin gate
 import { createSessionSchema } from './session.schema'; // 세션 생성 스키마
+import { adminPairSchema } from '../dto/session.dto'; // K phase 강제 페어링 body 스키마
 
 const router = Router();
 
@@ -206,6 +208,15 @@ router.post(
  */
 
 router.post('/:pairingToken/pair', authenticate, sessionsController.pairDevice);
+
+// K phase 관리자 강제 페어링 — chain: authenticate → requireAdmin → validate → controller
+router.post(
+  '/:pairingToken/admin-pair',
+  authenticate,
+  requireAdmin,
+  validate(adminPairSchema),
+  sessionsController.adminPairDevice
+);
 
 /**
  * @openapi
