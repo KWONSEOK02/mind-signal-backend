@@ -433,10 +433,26 @@ export const dualTriggerService: DualTriggerService = {
   async maybeTriggerDualAssignGroup(groupId) {
     // Mongoose Session 조회 — 3-condition AND 체크 (LD-1)
     const sessions = await Session.find({ groupId });
-    if (sessions.length === 0) return;
+    if (sessions.length === 0) {
+      console.log(
+        `[2PC-trigger-skip] groupId=${groupId} reason=no_sessions ` +
+          `sessionCount=0 mode=n/a subject1Paired=n/a subject2Paired=n/a ` +
+          `operatorJoined=n/a pendingCount=n/a`
+      );
+      return;
+    }
 
     const mode = sessions[0].experimentMode;
-    if (mode !== 'DUAL_2PC') return; // DUAL_2PC 모드가 아니면 skip
+    if (mode !== 'DUAL_2PC') {
+      // DUAL_2PC 모드가 아니면 skip
+      console.log(
+        `[2PC-trigger-skip] groupId=${groupId} reason=mode_not_dual_2pc ` +
+          `sessionCount=${sessions.length} mode=${mode} ` +
+          `subject1Paired=n/a subject2Paired=n/a operatorJoined=n/a ` +
+          `pendingCount=n/a`
+      );
+      return;
+    }
 
     const subject1Paired = sessions.some(
       (s) => s.subjectIndex === 1 && s.status === 'PAIRED'
@@ -446,12 +462,37 @@ export const dualTriggerService: DualTriggerService = {
     );
     const operatorJoined = operatorJoinedGroups.has(groupId);
 
-    // 3조건 AND 체크 (LD-1)
-    if (!subject1Paired || !subject2Paired || !operatorJoined) return;
+    // 3조건 AND 체크 (LD-1) — silent return reason 3분기 식별함
+    if (!subject1Paired || !subject2Paired || !operatorJoined) {
+      const reason = !subject1Paired
+        ? 'subject1_not_paired'
+        : !subject2Paired
+          ? 'subject2_not_paired'
+          : 'operator_not_joined';
+      console.log(
+        `[2PC-trigger-skip] groupId=${groupId} reason=${reason} ` +
+          `sessionCount=${sessions.length} mode=${mode} ` +
+          `subject1Paired=${subject1Paired} ` +
+          `subject2Paired=${subject2Paired} ` +
+          `operatorJoined=${operatorJoined} pendingCount=n/a`
+      );
+      return;
+    }
 
     // pending DE 정보 조회 (LD-13)
     const subjects = await dualTriggerService.collectPendingSubjects(groupId);
-    if (subjects.length !== 2) return;
+    if (subjects.length !== 2) {
+      console.log(
+        `[2PC-trigger-skip] groupId=${groupId} ` +
+          `reason=pending_count_mismatch ` +
+          `sessionCount=${sessions.length} mode=${mode} ` +
+          `subject1Paired=${subject1Paired} ` +
+          `subject2Paired=${subject2Paired} ` +
+          `operatorJoined=${operatorJoined} ` +
+          `pendingCount=${subjects.length}`
+      );
+      return;
+    }
 
     await dualTriggerService.triggerAssignGroup(groupId, subjects);
   },
