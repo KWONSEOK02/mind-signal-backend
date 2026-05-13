@@ -93,6 +93,14 @@ describe('Feature: 피실험자가 QR을 스캔해 세션에 합류함', () => {
         expect(result.event.subjectIndex).toBe(1);
         expect(result.event.mode).toBe('SEQUENTIAL');
         expect(typeof result.event.occurredAt).toBe('string');
+
+        // drainRecordedEvents observable (tdd-spec §2.1 #6 정합 — codex review R2-1)
+        const firstDrain = service.drainRecordedEvents();
+        expect(firstDrain).toHaveLength(1);
+        expect(firstDrain[0].type).toBe('SessionPaired');
+        expect(firstDrain[0].userId).toBe(userId);
+        // 두 번째 drain은 빈 배열 (buffer 비움 동작 검증)
+        expect(service.drainRecordedEvents()).toHaveLength(0);
       }
     );
   });
@@ -134,6 +142,9 @@ describe('Feature: 피실험자가 QR을 스캔해 세션에 합류함', () => {
         // 세션 status가 EXPIRED로 영속됨
         const reloaded = await repo.findById(expiredSession.id);
         expect(reloaded!.status).toBe('EXPIRED');
+
+        // 만료 흐름은 event 발화 0건 (tdd-spec §2.2 #3 — codex review R2-1)
+        expect(service.drainRecordedEvents()).toHaveLength(0);
       }
     );
   });
@@ -168,6 +179,13 @@ describe('Feature: 피실험자가 QR을 스캔해 세션에 합류함', () => {
         const afterFirst = await repo.findById(session.id);
         expect(afterFirst!.status).toBe('PAIRED');
         expect(afterFirst!.userId).toBe(firstUserId);
+        const firstPairedAt = afterFirst!.pairedAt;
+        expect(firstPairedAt).not.toBeNull();
+
+        // 첫 페어링 event는 buffer drain 후 retry 시 새 event 발화 0건 검증 준비
+        const firstDrain = service.drainRecordedEvents();
+        expect(firstDrain).toHaveLength(1);
+        expect(firstDrain[0].userId).toBe(firstUserId);
 
         // When — 두 번째 subject가 같은 토큰으로 합류 시도함
         const secondUserId = new Types.ObjectId().toString();
@@ -188,6 +206,10 @@ describe('Feature: 피실험자가 QR을 스캔해 세션에 합류함', () => {
         const afterSecond = await repo.findById(session.id);
         expect(afterSecond!.status).toBe('PAIRED');
         expect(afterSecond!.userId).toBe(firstUserId); // 첫 페어링 그대로 유지됨
+        // pairedAt unchanged (tdd-spec §2.3 #2 — codex review R2-1)
+        expect(afterSecond!.pairedAt!.getTime()).toBe(firstPairedAt!.getTime());
+        // retry 흐름은 새 event 발화 0건 (tdd-spec §2.3 #3)
+        expect(service.drainRecordedEvents()).toHaveLength(0);
       }
     );
   });
