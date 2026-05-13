@@ -35,6 +35,17 @@ DIFF-backend.md
 
 # 기타
 
+# Phase H deep-module-poc 산출물 중 박제 제외 (Abandonment-Cost-Scoring-Rubric 4점 이하)
+# 시각화 자료는 이슈/PR 본문에 mermaid code fence로 박제
+docs/architecture/*.mmd
+docs/architecture/*.svg
+docs/architecture/puppeteer-config.json
+
+# Phase H PAAR 중 단독 가치 낮음 (다른 PAAR에 흡수됨, codex r1 → r2 흡수, slice → depth 흡수)
+docs/reports/paar-2026-05-13-deep-module-poc-slice.md
+docs/reports/paar-2026-05-13-deep-module-poc-mermaid.md
+docs/reports/paar-2026-05-13-deep-module-poc-codex-r1.md
+
 # Project planning (local only)
 .plans/
 context/
