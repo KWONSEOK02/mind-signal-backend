@@ -26,6 +26,19 @@ if (nodeEnv !== 'test') {
   });
 }
 
+// 3.5 강제 페어링 admin allowlist — env ADMIN_EMAILS 콤마 구분, lowercase normalize함
+const adminEmails: readonly string[] = (process.env.ADMIN_EMAILS ?? '')
+  .split(',')
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+
+// production 환경에서 ADMIN_EMAILS 누락 시 startup fail-fast 처리함
+if (nodeEnv === 'production' && adminEmails.length === 0) {
+  throw new Error(
+    'Critical Error: ADMIN_EMAILS 환경변수가 production에서 설정되지 않았습니다.'
+  );
+}
+
 // 4. 설정 객체 내보내기
 export const config = {
   env: nodeEnv,
@@ -66,6 +79,8 @@ export const config = {
   kakaoClientId: process.env.KAKAO_CLIENT_ID,
   kakaoClientSecret: process.env.KAKAO_CLIENT_SECRET,
   kakaoRedirectUri: process.env.KAKAO_REDIRECT_URI,
+  // K phase 강제 페어링 admin allowlist — lowercase normalize됨
+  adminEmails,
   // Phase 16 DUAL_2PC 타임스탬프 정렬 설정 (optional — 기본값 사용 가능)
   dualPc: {
     // plan-review M-4: 편도 50ms + NTP skew 50ms = 200ms 기본값

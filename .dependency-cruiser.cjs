@@ -40,6 +40,25 @@ module.exports = {
       from: { path: '^src/05-features' },
       to: { path: '^(fs|path|node:fs|node:path)$' },
     },
+    // (e) R-DDD-1 no-mongoose-in-domain — 도메인 레이어는 Mongoose 또는 schema 파일 import 금지
+    //     순수 타입(session.types.ts)은 정규식이 .schema$만 매칭하므로 허용됨
+    //     @07-shared/constants/experiment (ExperimentMode single source)도 본 규칙 차단 대상 외
+    {
+      name: 'no-mongoose-in-domain',
+      comment: '도메인 레이어는 Mongoose 또는 schema 파일 import 금지 (순수 타입 파일은 허용)',
+      severity: 'error',
+      from: { path: '^src/06-entities/sessions/domain/' },
+      to: { path: '(^mongoose$|^src/06-entities/sessions/model/session\\.schema$)' },
+    },
+    // (f) R-DDD-2 no-redis-socket-in-domain — 도메인 레이어는 인프라(Redis/Socket.io) import 금지
+    //     @07-shared/constants/* 는 본 규칙 정규식이 lib/(redis|socket)만 매칭하므로 허용됨
+    {
+      name: 'no-redis-socket-in-domain',
+      comment: '도메인 레이어는 인프라(Redis/Socket.io)에 의존할 수 없음',
+      severity: 'error',
+      from: { path: '^src/06-entities/sessions/domain/' },
+      to: { path: '^src/07-shared/lib/(redis|socket)' },
+    },
   ],
   options: {
     tsConfig: { fileName: 'tsconfig.json' },

@@ -24,8 +24,10 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Claude Code (개인 설정)
-.claude/
+# Claude Code (개인 설정 — 단, Phase G가 박제한 vendored skills는 예외)
+.claude/*
+!.claude/skills/
+!.claude/skills/**
 
 # 기밀/임시 파일
 secret.txt
@@ -33,6 +35,24 @@ DIFF-backend.md
 
 # 기타
 
+# Phase H deep-module-poc 산출물 중 박제 제외 (Abandonment-Cost-Scoring-Rubric 4점 이하)
+# 시각화 자료는 이슈/PR 본문에 mermaid code fence로 박제
+docs/architecture/*.mmd
+docs/architecture/*.svg
+docs/architecture/puppeteer-config.json
+
+# Phase H PAAR 중 단독 가치 낮음 (다른 PAAR에 흡수됨, codex r1 → r2 흡수, slice → depth 흡수)
+docs/reports/paar-2026-05-13-deep-module-poc-slice.md
+docs/reports/paar-2026-05-13-deep-module-poc-mermaid.md
+docs/reports/paar-2026-05-13-deep-module-poc-codex-r1.md
+
 # Project planning (local only)
 .plans/
 context/
+
+# AI 에이전트 문서 (마인드 시그널 한정 — 본인만 사용, 팀 공유 안 함)
+# Why: 마인드 시그널은 이 패턴 적용을 본인 학습용으로 유지하고 다른 프로젝트에 templating할 예정.
+# 다른 모델 세션이 자동으로 추적 시도하지 않도록 .git/info/exclude 대신 .gitignore에 명시.
+AGENTS.md
+CLAUDE.md
+.agents/

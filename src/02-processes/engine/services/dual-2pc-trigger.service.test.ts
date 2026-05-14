@@ -307,10 +307,17 @@ describe('dualTriggerService — Phase 17.6', () => {
       freshModule.dualTriggerService,
       'triggerAssignGroup'
     );
+    // TS-7 (J phase amend): success path silent log 검증용 spy
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
     await freshModule.dualTriggerService.maybeTriggerDualAssignGroup('grp-006');
 
     expect(triggerSpy).toHaveBeenCalledWith('grp-006', expect.any(Array));
+    // TS-7: success path는 [2PC-trigger-skip] log emit 없음
+    expect(consoleSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('[2PC-trigger-skip]')
+    );
+    consoleSpy.mockRestore();
   });
 
   // ============================================================
@@ -470,5 +477,267 @@ describe('dualTriggerService — Phase 17.6', () => {
     expect(result1).toBe(true);
     // 2회차: 이미 등록됨 → false (idempotent)
     expect(result2).toBe(false);
+  });
+
+  // ============================================================
+  // TS-1 ~ TS-6: maybeTriggerDualAssignGroup audit logging (J phase)
+  //   6 silent return reason 분기별 log emit + trigger 미호출 검증함
+  // ============================================================
+
+  it('TS-1: sessions 빈 배열 → log emit reason=no_sessions + trigger 미호출됨', async () => {
+    jest.resetModules();
+    jest.mock('@06-entities/sessions', () => ({
+      Session: { find: jest.fn().mockResolvedValue([]) },
+    }));
+    const freshModule = await import('./dual-2pc-trigger.service');
+    const triggerSpy = jest.spyOn(
+      freshModule.dualTriggerService,
+      'triggerAssignGroup'
+    );
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+    await freshModule.dualTriggerService.maybeTriggerDualAssignGroup('g-empty');
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('reason=no_sessions')
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('groupId=g-empty')
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('sessionCount=0')
+    );
+    expect(triggerSpy).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it('TS-2: BTI mode → log emit reason=mode_not_dual_2pc + 미호출됨', async () => {
+    jest.resetModules();
+    jest.mock('@06-entities/sessions', () => ({
+      Session: {
+        find: jest.fn().mockResolvedValue([
+          {
+            groupId: 'g-bti',
+            subjectIndex: 1,
+            status: 'PAIRED',
+            experimentMode: 'BTI',
+          },
+        ]),
+      },
+    }));
+    const freshModule = await import('./dual-2pc-trigger.service');
+    const triggerSpy = jest.spyOn(
+      freshModule.dualTriggerService,
+      'triggerAssignGroup'
+    );
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+    await freshModule.dualTriggerService.maybeTriggerDualAssignGroup('g-bti');
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('reason=mode_not_dual_2pc')
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('mode=BTI')
+    );
+    expect(triggerSpy).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it('TS-3: subject1 미페어링 → log emit reason=subject1_not_paired + 미호출됨', async () => {
+    jest.resetModules();
+    jest.mock('@06-entities/sessions', () => ({
+      Session: {
+        find: jest.fn().mockResolvedValue([
+          {
+            groupId: 'g-s1',
+            subjectIndex: 1,
+            status: 'CREATED',
+            experimentMode: 'DUAL_2PC',
+          },
+          {
+            groupId: 'g-s1',
+            subjectIndex: 2,
+            status: 'PAIRED',
+            experimentMode: 'DUAL_2PC',
+          },
+        ]),
+      },
+    }));
+    const freshModule = await import('./dual-2pc-trigger.service');
+    freshModule.operatorJoinedGroups.add('g-s1');
+    const triggerSpy = jest.spyOn(
+      freshModule.dualTriggerService,
+      'triggerAssignGroup'
+    );
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+    await freshModule.dualTriggerService.maybeTriggerDualAssignGroup('g-s1');
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('reason=subject1_not_paired')
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('subject1Paired=false')
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('subject2Paired=true')
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('operatorJoined=true')
+    );
+    expect(triggerSpy).not.toHaveBeenCalled();
+    // cleanup — Set leak 방어 (plan-review R-02)
+    freshModule.operatorJoinedGroups.delete('g-s1');
+    consoleSpy.mockRestore();
+  });
+
+  it('TS-4: subject2 미페어링 → log emit reason=subject2_not_paired + 미호출됨', async () => {
+    jest.resetModules();
+    jest.mock('@06-entities/sessions', () => ({
+      Session: {
+        find: jest.fn().mockResolvedValue([
+          {
+            groupId: 'g-s2',
+            subjectIndex: 1,
+            status: 'PAIRED',
+            experimentMode: 'DUAL_2PC',
+          },
+          {
+            groupId: 'g-s2',
+            subjectIndex: 2,
+            status: 'CREATED',
+            experimentMode: 'DUAL_2PC',
+          },
+        ]),
+      },
+    }));
+    const freshModule = await import('./dual-2pc-trigger.service');
+    freshModule.operatorJoinedGroups.add('g-s2');
+    const triggerSpy = jest.spyOn(
+      freshModule.dualTriggerService,
+      'triggerAssignGroup'
+    );
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+    await freshModule.dualTriggerService.maybeTriggerDualAssignGroup('g-s2');
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('reason=subject2_not_paired')
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('subject1Paired=true')
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('subject2Paired=false')
+    );
+    expect(triggerSpy).not.toHaveBeenCalled();
+    freshModule.operatorJoinedGroups.delete('g-s2');
+    consoleSpy.mockRestore();
+  });
+
+  it('TS-5: operator 미참여 → log emit reason=operator_not_joined + 미호출됨', async () => {
+    jest.resetModules();
+    jest.mock('@06-entities/sessions', () => ({
+      Session: {
+        find: jest.fn().mockResolvedValue([
+          {
+            groupId: 'g-op',
+            subjectIndex: 1,
+            status: 'PAIRED',
+            experimentMode: 'DUAL_2PC',
+          },
+          {
+            groupId: 'g-op',
+            subjectIndex: 2,
+            status: 'PAIRED',
+            experimentMode: 'DUAL_2PC',
+          },
+        ]),
+      },
+    }));
+    const freshModule = await import('./dual-2pc-trigger.service');
+    // operatorJoinedGroups에 add 안 함 → operatorJoined=false 강제
+    const triggerSpy = jest.spyOn(
+      freshModule.dualTriggerService,
+      'triggerAssignGroup'
+    );
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+    await freshModule.dualTriggerService.maybeTriggerDualAssignGroup('g-op');
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('reason=operator_not_joined')
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('subject1Paired=true')
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('subject2Paired=true')
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('operatorJoined=false')
+    );
+    expect(triggerSpy).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it('TS-6: pending=1 (한쪽만 등록) → reason=pending_count_mismatch + 미호출됨', async () => {
+    jest.resetModules();
+    jest.mock('@07-shared/config/config', () => ({
+      config: { dataEngine: { secretKey: 'valid-secret' } },
+    }));
+    jest.mock('@06-entities/sessions', () => ({
+      Session: {
+        find: jest.fn().mockResolvedValue([
+          {
+            groupId: 'g-pc1',
+            subjectIndex: 1,
+            status: 'PAIRED',
+            experimentMode: 'DUAL_2PC',
+          },
+          {
+            groupId: 'g-pc1',
+            subjectIndex: 2,
+            status: 'PAIRED',
+            experimentMode: 'DUAL_2PC',
+          },
+        ]),
+      },
+    }));
+    const freshModule = await import('./dual-2pc-trigger.service');
+    const freshRegistryModule = await import('./engine-registry.service');
+    // subject 1만 등록 → pending.length = 1 → collectPendingSubjects 빈 배열 반환
+    freshRegistryModule.engineRegistryService.registerPending(
+      1,
+      'http://de-1.ngrok-free.dev',
+      'valid-secret'
+    );
+    freshModule.operatorJoinedGroups.add('g-pc1');
+    const triggerSpy = jest.spyOn(
+      freshModule.dualTriggerService,
+      'triggerAssignGroup'
+    );
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+    await freshModule.dualTriggerService.maybeTriggerDualAssignGroup('g-pc1');
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('reason=pending_count_mismatch')
+    );
+    // pendingCount 값까지 검증 (plan-review R-01/R-03)
+    // collectPendingSubjects line 421 `pending.length < 2 ? []` → subjects.length=0
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('pendingCount=0')
+    );
+    expect(triggerSpy).not.toHaveBeenCalled();
+    // cleanup — registry + Set 양쪽 (unregisterPending: subjectIndex, url, secret)
+    freshRegistryModule.engineRegistryService.unregisterPending(
+      1,
+      'http://de-1.ngrok-free.dev',
+      'valid-secret'
+    );
+    freshModule.operatorJoinedGroups.delete('g-pc1');
+    consoleSpy.mockRestore();
   });
 });

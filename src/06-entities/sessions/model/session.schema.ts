@@ -1,5 +1,9 @@
 import { Schema, model, Model, HydratedDocument, Types } from 'mongoose';
 import { ExperimentMode } from '@07-shared/constants/experiment';
+import type { SessionStatus } from '../types/session.types';
+
+// SessionStatus re-export — 외부에서 schema 또는 types 양쪽 경로로 import 호환함
+export type { SessionStatus };
 
 /** * 1. 문서 필드 타입 정의
  * ERD의 필드와 Note A 규칙을 반영함
@@ -10,19 +14,13 @@ export interface Session {
   pairingToken: string; // 고유 페어링 토큰임
   userId: Types.ObjectId | null; // 페어링 성공 시 바인딩되는 사용자 ID임
   creatorId: Types.ObjectId | null; // 세션 생성자(운영자) ID임
-  status:
-    | 'CREATED'
-    | 'PAIRED'
-    | 'MEASURING'
-    | 'COMPLETED'
-    | 'EXPIRED'
-    | 'CANCELLED';
+  status: SessionStatus; // 세션 상태 6종 (session.types.ts 단일 정의 참조)
   pairedAt: Date | null; // 페어링 완료 시점
   expiresAt: Date; // 토큰 만료 시점
   measuredAt: Date | null; // 측정 시작 시점
   stopReason: 'Natural' | 'ManualEarly' | 'HeadsetLost' | 'ProcessError' | null;
   measuredDurationSeconds: number | null;
-  experimentMode: ExperimentMode; // 실험 모드 (DUAL | SEQUENTIAL | BTI)
+  experimentMode: ExperimentMode; // 실험 모드 (DUAL | SEQUENTIAL | BTI | DUAL_2PC)
 }
 
 /** 2. 인스턴스 메서드 타입 정의 */
