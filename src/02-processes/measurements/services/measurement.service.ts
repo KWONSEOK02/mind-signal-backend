@@ -83,6 +83,8 @@ async function subscribeWithAligner(groupId: string): Promise<void> {
   const intervalId = setInterval(() => {
     timestampAlignerRegistry.flush(groupId);
   }, 100);
+  // process 종료 시 flush 타이머가 Jest/Node를 block하지 않도록 unref 적용함
+  intervalId.unref();
   groupFlushIntervals.set(groupId, intervalId);
 }
 
