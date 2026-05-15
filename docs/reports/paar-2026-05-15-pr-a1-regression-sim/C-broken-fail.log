@@ -1,0 +1,62 @@
+
+> mind-signal-backend@1.0.0 test
+> jest aggregate-to-response-dto|session.routes.psa1
+
+FAIL src/06-entities/sessions/mappers/aggregate-to-response-dto.test.ts (6.762 s)
+  ● aggregateToPairingResponseDto › M-3: operatorId(string) → creatorId(string) 필드명 변환함
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "507f1f77bcf86cd799439040"
+    Received: ""
+
+    [0m [90m 45 |[39m     [36mconst[39m dto [33m=[39m aggregateToPairingResponseDto(aggregate)[33m;[39m
+     [90m 46 |[39m
+    [31m[1m>[22m[39m[90m 47 |[39m     expect(dto[33m.[39mcreatorId)[33m.[39mtoBe(baseParams[33m.[39moperatorId)[33m;[39m
+     [90m    |[39m                           [31m[1m^[22m[39m
+     [90m 48 |[39m     expect(dto)[33m.[39mnot[33m.[39mtoHaveProperty([32m'operatorId'[39m)[33m;[39m
+     [90m 49 |[39m   })[33m;[39m
+     [90m 50 |[39m[0m
+
+      at Object.<anonymous> (src/06-entities/sessions/mappers/aggregate-to-response-dto.test.ts:47:27)
+
+  ● aggregateToPairingResponseDto › M-5: operatorId = null → creatorId = null 변환함 (CX-1 nullable 보존)
+
+    expect(received).toBeNull()
+
+    Received: ""
+
+    [0m [90m 66 |[39m     })[33m;[39m
+     [90m 67 |[39m     [36mconst[39m dto [33m=[39m aggregateToPairingResponseDto(aggregate)[33m;[39m
+    [31m[1m>[22m[39m[90m 68 |[39m     expect(dto[33m.[39mcreatorId)[33m.[39mtoBeNull()[33m;[39m
+     [90m    |[39m                           [31m[1m^[22m[39m
+     [90m 69 |[39m   })[33m;[39m
+     [90m 70 |[39m })[33m;[39m
+     [90m 71 |[39m[0m
+
+      at Object.<anonymous> (src/06-entities/sessions/mappers/aggregate-to-response-dto.test.ts:68:27)
+
+PASS src/05-features/sessions/api/session.routes.psa1.test.ts (11.079 s)
+  ● Console
+
+    console.log
+      [dotenv@17.2.3] injecting env (8) from .env.test -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+
+      at _log (node_modules/dotenv/lib/main.js:142:11)
+
+    console.log
+      현재 구동 환경: test
+
+      at Object.<anonymous> (src/07-shared/config/config.ts:96:9)
+
+    console.log
+      연결된 DB URI: mongodb+srv://gwonseok02:lHY1VGqLcfcGbZy1@todo-dev-cluster.1eldpej.mongodb.net/mind_signal_dev?retryWrites=true&w=majority&appName=todo-dev-cluster
+
+      at Object.<anonymous> (src/07-shared/config/config.ts:97:9)
+
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       2 failed, 5 passed, 7 total
+Snapshots:   0 total
+Time:        26.351 s
+Ran all test suites matching aggregate-to-response-dto|session.routes.psa1.

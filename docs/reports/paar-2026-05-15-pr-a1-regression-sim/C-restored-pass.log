@@ -1,0 +1,29 @@
+
+> mind-signal-backend@1.0.0 test
+> jest aggregate-to-response-dto|session.routes.psa1
+
+PASS src/06-entities/sessions/mappers/aggregate-to-response-dto.test.ts (6.243 s)
+PASS src/05-features/sessions/api/session.routes.psa1.test.ts (10.584 s)
+  ● Console
+
+    console.log
+      [dotenv@17.2.3] injecting env (8) from .env.test -- tip: ⚙️  enable debug logging with { debug: true }
+
+      at _log (node_modules/dotenv/lib/main.js:142:11)
+
+    console.log
+      현재 구동 환경: test
+
+      at Object.<anonymous> (src/07-shared/config/config.ts:96:9)
+
+    console.log
+      연결된 DB URI: mongodb+srv://gwonseok02:lHY1VGqLcfcGbZy1@todo-dev-cluster.1eldpej.mongodb.net/mind_signal_dev?retryWrites=true&w=majority&appName=todo-dev-cluster
+
+      at Object.<anonymous> (src/07-shared/config/config.ts:97:9)
+
+
+Test Suites: 2 passed, 2 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        25.522 s
+Ran all test suites matching aggregate-to-response-dto|session.routes.psa1.
