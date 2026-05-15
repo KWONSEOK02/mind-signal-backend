@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import {
   createGroupSessionProcess,
-  pairDeviceProcess,
+  firePairingCompleteListeners,
 } from '@05-features/sessions/services/pairing.service';
 import { submitConsentProcess } from '@05-features/sessions/services/submit-consent.service';
 import { createOperatorInviteToken } from '@05-features/sessions/services/invite-operator.service';
@@ -14,6 +14,12 @@ import {
 } from '@05-features/sessions/dto/session.dto';
 import { Session } from '@06-entities/sessions';
 import { AuthedRequest } from '@07-shared/types';
+import { systemClock } from '@07-shared/clock';
+import {
+  sessionRepository,
+  aggregateToPairingResponseDto,
+} from '@06-entities/sessions';
+import { PairSubjectService } from '@05-features/sessions/services/pair-subject.service';
 
 /**
  * [Controller] 새로운 그룹 세션 또는 그룹 내 추가 세션 생성 수행함
@@ -106,6 +112,8 @@ export const checkGroupStatus = async (
 
 /**
  * [Controller] 모바일 기기 페어링 요청 처리함
+ *
+ * PairSubjectService request-scope factory + controller-level listener fire (ADR-008 §1, §3)
  */
 export const pairDevice = async (
   req: Request,
@@ -116,19 +124,29 @@ export const pairDevice = async (
     const validatedRequest = pairDeviceSchema.parse({ params: req.params });
     const { pairingToken } = validatedRequest.params;
 
-    // 유저 존재 여부 체크 (Type Guard)
     if (!req.user || !req.user.id) {
       throw new AppError('인증이 필요한 서비스입니다.', 401);
     }
 
     const userId = req.user.id;
 
-    // 서비스 로직 호출하여 페어링 상태 업데이트 수행함
-    const session = await pairDeviceProcess(pairingToken, userId);
+    // Request-scope PS factory (recordedEvents buffer 누적 차단, ADR-008 §1)
+    const pairSubjectService = new PairSubjectService(
+      sessionRepository,
+      systemClock
+    );
+
+    const result = await pairSubjectService.execute({ pairingToken, userId });
+
+    // Controller-level listener fire (dual-fire atomic, ADR-008 §3)
+    firePairingCompleteListeners(
+      result.event.groupId,
+      result.event.subjectIndex
+    );
 
     res.status(200).json({
       status: 'success',
-      data: session,
+      data: aggregateToPairingResponseDto(result.session),
     });
   } catch (error) {
     next(error);
