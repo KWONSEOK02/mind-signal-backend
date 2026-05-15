@@ -1,4 +1,4 @@
-import { SystemClock, FixedClock } from './index';
+import { SystemClock, FixedClock, systemClock } from './index';
 
 describe('SystemClock', () => {
   it('호출 결과가 valid Date 인스턴스임', () => {
@@ -11,6 +11,16 @@ describe('SystemClock', () => {
     const before = Date.now();
     const result = new SystemClock().now();
     expect(result.getTime()).toBeGreaterThanOrEqual(before);
+  });
+});
+
+describe('systemClock singleton', () => {
+  it('systemClock singleton은 Clock 인터페이스를 구현함', () => {
+    // now() 반환값이 Date 인스턴스임
+    expect(systemClock.now()).toBeInstanceOf(Date);
+    // 동일 모듈 참조 — singleton 검증함
+    const { systemClock: sameRef } = require('./index');
+    expect(systemClock).toBe(sameRef);
   });
 });
 
