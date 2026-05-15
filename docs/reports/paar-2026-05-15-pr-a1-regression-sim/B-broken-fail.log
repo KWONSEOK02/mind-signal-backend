@@ -1,0 +1,46 @@
+
+> mind-signal-backend@1.0.0 test
+> jest session.routes.psa1.test.ts
+
+  console.log
+    [dotenv@17.2.3] injecting env (8) from .env.test -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+
+      at _log (node_modules/dotenv/lib/main.js:142:11)
+
+  console.log
+    현재 구동 환경: test
+
+      at Object.<anonymous> (src/07-shared/config/config.ts:96:9)
+
+  console.log
+    연결된 DB URI: mongodb+srv://gwonseok02:lHY1VGqLcfcGbZy1@todo-dev-cluster.1eldpej.mongodb.net/mind_signal_dev?retryWrites=true&w=majority&appName=todo-dev-cluster
+
+      at Object.<anonymous> (src/07-shared/config/config.ts:97:9)
+
+FAIL src/05-features/sessions/api/session.routes.psa1.test.ts (6.162 s)
+  POST /api/sessions/:pairingToken/pair (PSA1 E2E)
+    × E2E-A: 정상 페어링 시 200 + DTO + listener fire 1회 (controller→helper 검증) (38 ms)
+    √ E2E-B: 만료 토큰 페어링 시 401 한국어 응답 + listener 0회 (7 ms)
+
+  ● POST /api/sessions/:pairingToken/pair (PSA1 E2E) › E2E-A: 정상 페어링 시 200 + DTO + listener fire 1회 (controller→helper 검증)
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 1
+    Received number of calls: 0
+
+    [0m [90m 141 |[39m
+     [90m 142 |[39m     [90m// controller-level listener fire 검증 (ADR-008 §3)[39m
+    [31m[1m>[22m[39m[90m 143 |[39m     expect(firePairingCompleteListeners)[33m.[39mtoHaveBeenCalledTimes([35m1[39m)[33m;[39m
+     [90m     |[39m                                          [31m[1m^[22m[39m
+     [90m 144 |[39m     expect(firePairingCompleteListeners)[33m.[39mtoHaveBeenCalledWith(
+     [90m 145 |[39m       aggregate[33m.[39mgroupId[33m,[39m
+     [90m 146 |[39m       aggregate[33m.[39msubjectIndex[0m
+
+      at Object.<anonymous> (src/05-features/sessions/api/session.routes.psa1.test.ts:143:42)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        6.471 s, estimated 9 s
+Ran all test suites matching session.routes.psa1.test.ts.
