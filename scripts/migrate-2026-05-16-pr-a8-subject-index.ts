@@ -15,6 +15,7 @@
  */
 
 import mongoose, { ClientSession } from 'mongoose';
+import { config } from '@07-shared/config/config';
 import { Session } from '../src/06-entities/sessions/model/session.schema';
 
 type Mode = 'dry-run' | 'apply';
@@ -105,10 +106,10 @@ async function reassignFromCounter(
 }
 
 async function main(mode: Mode): Promise<number> {
-  // M3 amend: process.env.MONGODB_URI! 비단언 — 명시 가드 (미설정 시 에러 shape 명확)
-  const uri = process.env.MONGODB_URI;
-  if (!uri) throw new Error('MONGODB_URI is not set');
-  await mongoose.connect(uri, { serverSelectionTimeoutMS: 15000 });
+  // env 로딩 — config 모듈 경유함 (.env.local 자동 로드, AGENTS "dotenv 직접 금지 → config 경유" 정합).
+  // config import 시점 REQUIRED_ENV_VARS 검증이 MONGODB_URI 미설정 시 명확 에러 throw — M3 가드 의도 보존함.
+  // scripts/seeds/seed.ts 동일 패턴 정합 (config.mongoUri + mongoose.connect).
+  await mongoose.connect(config.mongoUri, { serverSelectionTimeoutMS: 15000 });
   try {
     const classified = await classify();
     const byCategory: Record<Category, ClassifiedDoc[]> = {
