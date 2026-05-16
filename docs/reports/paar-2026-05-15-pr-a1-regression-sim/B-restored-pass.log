@@ -13,7 +13,7 @@
       at Object.<anonymous> (src/07-shared/config/config.ts:96:9)
 
   console.log
-    연결된 DB URI: mongodb+srv://gwonseok02:lHY1VGqLcfcGbZy1@todo-dev-cluster.1eldpej.mongodb.net/mind_signal_dev?retryWrites=true&w=majority&appName=todo-dev-cluster
+    연결된 DB URI: mongodb+srv://gwonseok02:***@todo-dev-cluster.1eldpej.mongodb.net/mind_signal_dev?retryWrites=true&w=majority&appName=todo-dev-cluster
 
       at Object.<anonymous> (src/07-shared/config/config.ts:97:9)
 
