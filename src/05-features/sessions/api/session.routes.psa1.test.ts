@@ -29,14 +29,13 @@ jest.mock('@07-shared/clock', () => {
 });
 
 // 1-3. 06-entities/sessions mock — Mongoose model 재실행 차단 (CX-4)
-// InvalidStatusTransitionError는 domain/errors.ts에 export됨 (CX2-1)
+// InvariantViolationError / InvalidStatusTransitionError는 domain/errors.ts에 export됨 (CX2-1)
 jest.mock('@06-entities/sessions', () => {
   const { SessionAggregate } = jest.requireActual(
     '@06-entities/sessions/domain/session.aggregate'
   );
-  const { InvalidStatusTransitionError } = jest.requireActual(
-    '@06-entities/sessions/domain/errors'
-  );
+  const { InvariantViolationError, InvalidStatusTransitionError } =
+    jest.requireActual('@06-entities/sessions/domain/errors');
   const { aggregateToPairingResponseDto } = jest.requireActual(
     '@06-entities/sessions/mappers/aggregate-to-response-dto'
   );
@@ -46,6 +45,7 @@ jest.mock('@06-entities/sessions', () => {
 
   return {
     SessionAggregate,
+    InvariantViolationError,
     InvalidStatusTransitionError,
     aggregateToPairingResponseDto,
     sessionRepository: { findByPairingToken, save },
@@ -63,7 +63,11 @@ jest.mock('@05-features/sessions/services/pairing.service', () => ({
 // 2. 라우터 + 의존성 import (mock 적용 후)
 import sessionRoutes from './session.routes';
 import { firePairingCompleteListeners } from '@05-features/sessions/services/pairing.service';
-import { sessionRepository, SessionAggregate } from '@06-entities/sessions';
+import {
+  sessionRepository,
+  SessionAggregate,
+  InvariantViolationError,
+} from '@06-entities/sessions';
 
 // 3. bare Express app 빌드 (C4-CONN 해소, session.routes.adminpair.test.ts:56-71 패턴)
 const buildApp = () => {
@@ -181,5 +185,25 @@ describe('POST /api/sessions/:pairingToken/pair (PSA1 E2E)', () => {
 
     // listener 미발화 확인
     expect(firePairingCompleteListeners).not.toHaveBeenCalled();
+  });
+
+  it('E2E-C: legacy null doc 페어링 → HTTP 500 (InvariantViolationError → global handler 매핑 잠금)', async () => {
+    // Arrange — findByPairingToken이 InvariantViolationError를 throw (legacy null subjectIndex 시뮬레이션)
+    // R3-H1 amend: controller next(err) → global handler 비-AppError 500 변환 회귀 가드
+    (sessionRepository.findByPairingToken as jest.Mock).mockRejectedValue(
+      new InvariantViolationError('subjectIndex must be >= 1, got null')
+    );
+
+    // Act
+    const res = await request(app)
+      .post('/api/sessions/legacy-null-token/pair')
+      .set('Authorization', 'Bearer test-token');
+
+    // Assert — InvariantViolationError는 AppError 아님 → global handler가 500 변환함
+    expect(res.status).toBe(500);
+
+    // listener 미발화 + save 미호출 확인
+    expect(firePairingCompleteListeners).not.toHaveBeenCalled();
+    expect(sessionRepository.save).not.toHaveBeenCalled();
   });
 });
