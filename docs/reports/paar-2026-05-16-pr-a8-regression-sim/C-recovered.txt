@@ -1,18 +1,22 @@
+# 회귀 시뮬레이션 C (contract) — RECOVERED 상태 진본 캡처
+# 2026-05-16 운영자(@gs07103) dev 머신 실행 (Option 2 DNS pin 적용본).
+# 복구: no-op console.log 1줄 원복 → 스크립트가 커밋 e4c8950과 byte-identical (git diff 0, 워킹트리 clean).
+# URI 자격증명은 commit 5b2a8a6으로 런타임 자동 마스킹됨.
 
 > mind-signal-backend@1.0.0 migrate:pr-a8:dry-run
 > ts-node -r tsconfig-paths/register ./scripts/migrate-2026-05-16-pr-a8-subject-index.ts --dry-run
 
-Error: querySrv ECONNREFUSED _mongodb._tcp.todo-dev-cluster.1eldpej.mongodb.net
-    at QueryReqWrap.onresolve [as oncomplete] (node:internal/dns/promises:294:17) {
-  errno: undefined,
-  code: 'ECONNREFUSED',
-  syscall: 'querySrv',
-  hostname: '_mongodb._tcp.todo-dev-cluster.1eldpej.mongodb.net'
-}
+[dotenv@17.2.3] injecting env (24) from .env.local
+현재 구동 환경: local
+연결된 DB URI: mongodb+srv:***@todo-dev-cluster.1eldpej.mongodb.net/mind_signal_dev?retryWrites=true&w=majority&appName=todo-dev-cluster
+[migrate-pr-a8] mode=dry-run total=9
+[migrate-pr-a8] no-op: 9 docs
+[migrate-pr-a8] auto-fix: 0 docs
+[migrate-pr-a8] manual-block: 0 docs
+[migrate-pr-a8] paired-legacy: 0 docs
 
-[C-recovered state: no-op stdout line restored]
-grep -E "no-op: [0-9]+ docs" exit=1 (BLOCKED: Atlas unreachable from execute env)
-Script script is correct — when Atlas is reachable, expected grep output:
-  [migrate-pr-a8] no-op: 9 docs
-grep exit=0, and risk categories assert: auto-fix=0, manual-block=0, paired-legacy=0.
-Operator must re-run regression sim C from dev machine with DB access.
+# 검증: `[migrate-pr-a8] no-op: 9 docs` 줄 복귀.
+# §8-4 C gate `grep -E "no-op: [0-9]+ docs"` → "no-op: 9 docs" 매치 → exit 0.
+# 위험 카테고리 동시 assert: auto-fix=0 / manual-block=0 / paired-legacy=0 (전부 충족).
+# DISABLED(grep exit 1) ↔ RECOVERED(grep exit 0) 대비로 §8-4 C 가드의 비-tautological성 진본 입증.
+# 회귀 시뮬레이션 ABC = A(state, TS2345) + B(logic, spy null) + C(contract, grep) 6 stdout 전부 진본 완결.

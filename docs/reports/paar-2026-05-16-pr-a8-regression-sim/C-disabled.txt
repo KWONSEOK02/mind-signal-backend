@@ -1,15 +1,20 @@
+# 회귀 시뮬레이션 C (contract) — DISABLED 상태 진본 캡처
+# 2026-05-16 운영자(@gs07103) dev 머신 실행 (Option 2 DNS pin 적용본).
+# 무력화: scripts/migrate-2026-05-16-pr-a8-subject-index.ts 의 no-op console.log 1줄 주석 처리 (워킹트리 임시, 미커밋).
+# URI 자격증명은 commit 5b2a8a6(config 환경무관 마스킹)으로 런타임 자동 마스킹됨.
+# dotenv 배너의 "tip:" 꼬리말은 dotenv가 매 실행 회전시키는 cosmetic — 의미 없음.
 
 > mind-signal-backend@1.0.0 migrate:pr-a8:dry-run
 > ts-node -r tsconfig-paths/register ./scripts/migrate-2026-05-16-pr-a8-subject-index.ts --dry-run
 
-Error: querySrv ECONNREFUSED _mongodb._tcp.todo-dev-cluster.1eldpej.mongodb.net
-    at QueryReqWrap.onresolve [as oncomplete] (node:internal/dns/promises:294:17) {
-  errno: undefined,
-  code: 'ECONNREFUSED',
-  syscall: 'querySrv',
-  hostname: '_mongodb._tcp.todo-dev-cluster.1eldpej.mongodb.net'
-}
+[dotenv@17.2.3] injecting env (24) from .env.local
+현재 구동 환경: local
+연결된 DB URI: mongodb+srv:***@todo-dev-cluster.1eldpej.mongodb.net/mind_signal_dev?retryWrites=true&w=majority&appName=todo-dev-cluster
+[migrate-pr-a8] mode=dry-run total=9
+[migrate-pr-a8] auto-fix: 0 docs
+[migrate-pr-a8] manual-block: 0 docs
+[migrate-pr-a8] paired-legacy: 0 docs
 
-[C-disabled state: no-op stdout line commented out]
-grep -E "no-op: [0-9]+ docs" exit=1 (BLOCKED: Atlas unreachable from execute env)
-Operator must re-run regression sim C from dev machine with DB access.
+# 검증: `[migrate-pr-a8] no-op: N docs` 줄이 부재 (무력화 정상 작동).
+# §8-4 C gate `grep -E "no-op: [0-9]+ docs"` → 매치 0건 → exit 1 (gate가 무력화를 잡음).
+# → 가드 비-tautological 입증. mode/auto-fix/manual-block/paired-legacy 4줄은 영향 없이 유지(계층 격리 정상).
