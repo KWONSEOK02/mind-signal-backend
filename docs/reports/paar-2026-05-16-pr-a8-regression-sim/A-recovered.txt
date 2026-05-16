@@ -1,0 +1,28 @@
+
+> mind-signal-backend@1.0.0 test
+> jest session.aggregate.test.ts --testNamePattern=throws InvariantViolationError
+
+PASS src/06-entities/sessions/domain/session.aggregate.test.ts
+  SessionAggregate
+    create()
+      ○ skipped 1. happy path — SEQUENTIAL 모드 + 유효 인자 → 상태 CREATED
+      ○ skipped 2. invariant 위반 — empty pairingToken → InvariantViolationError
+      ○ skipped 3. invariant 위반 — subjectIndex < 1 → InvariantViolationError
+    pair()
+      ○ skipped 4. happy path — CREATED + 미만료 → PAIRED + userId 바인딩 + pairedAt = now (참조 동등성)
+      ○ skipped 5. 실패 — isExpired(now) === true → InvalidStatusTransitionError
+      ○ skipped 6. 실패 — status === PAIRED에서 재호출 → InvalidStatusTransitionError
+    markMeasuring() & cancel()
+      ○ skipped 7. markMeasuring() 실패 — CREATED에서 호출 → InvalidStatusTransitionError
+      ○ skipped 8. cancel() happy — PAIRED에서 CANCELLED 전이
+      ○ skipped 9. isExpired(now) — boundary 비교 (ADR-007 정합)
+  SessionAggregate.fromDocument invariant
+    √ throws InvariantViolationError on empty pairingToken (12 ms)
+    √ throws InvariantViolationError on null subjectIndex (1 ms)
+    √ throws InvariantViolationError on subjectIndex < 1 (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       9 skipped, 3 passed, 12 total
+Snapshots:   0 total
+Time:        2.988 s
+Ran all test suites matching session.aggregate.test.ts with tests matching "throws InvariantViolationError".
