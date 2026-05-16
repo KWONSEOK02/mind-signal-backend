@@ -1,11 +1,19 @@
+# 캡처: 2026-05-16 운영자(@gs07103) dev 머신 실행 진본 stdout.
+# Option 2(commit e4c8950, public DNS pin) 적용 후 querySrv ECONNREFUSED 해소되어 정상 완료.
+# DB URI 자격증명은 repo 안전을 위해 ***로 수동 redact (config.ts commit 9 이후로는 자동 마스킹).
 
 > mind-signal-backend@1.0.0 migrate:pr-a8:dry-run
 > ts-node -r tsconfig-paths/register ./scripts/migrate-2026-05-16-pr-a8-subject-index.ts --dry-run
 
-Error: querySrv ECONNREFUSED _mongodb._tcp.todo-dev-cluster.1eldpej.mongodb.net
-    at QueryReqWrap.onresolve [as oncomplete] (node:internal/dns/promises:294:17) {
-  errno: undefined,
-  code: 'ECONNREFUSED',
-  syscall: 'querySrv',
-  hostname: '_mongodb._tcp.todo-dev-cluster.1eldpej.mongodb.net'
-}
+[dotenv@17.2.3] injecting env (24) from .env.local
+현재 구동 환경: local
+연결된 DB URI: mongodb+srv://gwonseok02:***@todo-dev-cluster.1eldpej.mongodb.net/mind_signal_dev?retryWrites=true&w=majority&appName=todo-dev-cluster
+[migrate-pr-a8] mode=dry-run total=9
+[migrate-pr-a8] no-op: 9 docs
+[migrate-pr-a8] auto-fix: 0 docs
+[migrate-pr-a8] manual-block: 0 docs
+[migrate-pr-a8] paired-legacy: 0 docs
+
+# 결론: dev DB sessions 9건 전부 no-op (subjectIndex >= 1). legacy(auto-fix/manual-block/paired-legacy) 0건.
+# DISCUSS §1-5 실측(total 9, ge1 9) + PLAN R-2 예상 정확 일치 → invariant 활성 시 dev read 거부 risk 0 진본 입증.
+# exit code 0 (no-op만 — process.exitCode=0).
