@@ -95,4 +95,12 @@ export const config = {
 
 console.log(`현재 구동 환경: ${config.env}`);
 // DB 자격증명은 환경 무관 마스킹함 — local 로그도 터미널·CI·전사 transcript에 평문 유출 위험 있음.
-console.log(`연결된 DB URI: ${config.mongoUri.replace(/:([^@]+)@/, ':***@')}`);
+// null-safe — test/CI는 MONGODB_URI 미설정(.env.test gitignore) + NODE_ENV=test로 required-env 검사 skip이라
+// config.mongoUri가 undefined일 수 있음. unconditional .replace는 모듈 로드 시점 TypeError 유발함.
+console.log(
+  `연결된 DB URI: ${
+    config.mongoUri
+      ? config.mongoUri.replace(/:([^@]+)@/, ':***@')
+      : '(MONGODB_URI 미설정)'
+  }`
+);
