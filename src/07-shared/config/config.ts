@@ -94,6 +94,5 @@ export const config = {
 } as const; // 읽기 전용으로 설정
 
 console.log(`현재 구동 환경: ${config.env}`);
-console.log(
-  `연결된 DB URI: ${config.isProduction ? config.mongoUri.replace(/:([^@]+)@/, ':***@') : config.mongoUri}`
-);
+// DB 자격증명은 환경 무관 마스킹함 — local 로그도 터미널·CI·전사 transcript에 평문 유출 위험 있음.
+console.log(`연결된 DB URI: ${config.mongoUri.replace(/:([^@]+)@/, ':***@')}`);
