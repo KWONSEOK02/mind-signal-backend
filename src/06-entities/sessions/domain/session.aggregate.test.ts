@@ -5,7 +5,7 @@
  * DOMAIN-MODEL-NOTES §3.1 정합 / PLAN rev.3 §6.2 시나리오 8건.
  */
 
-import { SessionAggregate } from './session.aggregate';
+import { SessionAggregate, type SessionAggregateDocumentFields } from './session.aggregate';
 import {
   InvariantViolationError,
   InvalidStatusTransitionError,
@@ -126,5 +126,39 @@ describe('SessionAggregate', () => {
       const afterBoundary = new Date(expiresAt.getTime() + 1);
       expect(aggregate.isExpired(afterBoundary)).toBe(true);
     });
+  });
+});
+
+describe('SessionAggregate.fromDocument invariant', () => {
+  // SessionAggregateDocumentFields.subjectIndex 는 T1 후 number | null
+  const baseDoc: SessionAggregateDocumentFields = {
+    _id: 'sess-001',
+    groupId: 'grp-001',
+    subjectIndex: 1,
+    pairingToken: 'ABC123',
+    creatorId: null,
+    experimentMode: 'DUAL',
+    expiresAt: new Date(Date.now() + 60_000),
+    status: 'CREATED',
+    userId: null,
+    pairedAt: null,
+  };
+
+  it('throws InvariantViolationError on empty pairingToken', () => {
+    expect(() =>
+      SessionAggregate.fromDocument({ ...baseDoc, pairingToken: '' })
+    ).toThrow(InvariantViolationError);
+  });
+
+  it('throws InvariantViolationError on null subjectIndex', () => {
+    expect(() =>
+      SessionAggregate.fromDocument({ ...baseDoc, subjectIndex: null })
+    ).toThrow(/subjectIndex must be >= 1, got null/);
+  });
+
+  it('throws InvariantViolationError on subjectIndex < 1', () => {
+    expect(() =>
+      SessionAggregate.fromDocument({ ...baseDoc, subjectIndex: 0 })
+    ).toThrow(/subjectIndex must be >= 1, got 0/);
   });
 });

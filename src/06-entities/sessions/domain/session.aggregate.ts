@@ -30,7 +30,7 @@ export interface SessionAggregateCreateParams {
 export interface SessionAggregateDocumentFields {
   _id: string;
   groupId: string;
-  subjectIndex: number;
+  subjectIndex: number | null; // DB legacy 도큐먼트 null 허용 — fromDocument에서 invariant 검증함
   pairingToken: string;
   creatorId: string | null;
   experimentMode: ExperimentMode;
@@ -91,6 +91,14 @@ export class SessionAggregate {
 
   /** DB 도큐먼트 → 통합체 변환 — Repository 내부에서만 호출함 */
   static fromDocument(doc: SessionAggregateDocumentFields): SessionAggregate {
+    if (!doc.pairingToken) {
+      throw new InvariantViolationError('empty pairing token');
+    }
+    if (doc.subjectIndex == null || doc.subjectIndex < 1) {
+      throw new InvariantViolationError(
+        `subjectIndex must be >= 1, got ${doc.subjectIndex}`
+      );
+    }
     return new SessionAggregate(
       doc._id,
       doc.groupId,
