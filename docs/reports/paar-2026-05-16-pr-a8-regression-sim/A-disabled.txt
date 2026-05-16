@@ -1,0 +1,18 @@
+
+> mind-signal-backend@1.0.0 test
+> jest session.aggregate.test.ts --testNamePattern=throws InvariantViolationError
+
+FAIL src/06-entities/sessions/domain/session.aggregate.test.ts
+  ● Test suite failed to run
+
+    [96msrc/06-entities/sessions/domain/session.aggregate.ts[0m:[93m105[0m:[93m7[0m - [91merror[0m[90m TS2345: [0mArgument of type 'number | null' is not assignable to parameter of type 'number'.
+      Type 'null' is not assignable to type 'number'.
+
+    [7m105[0m       doc.subjectIndex,
+    [7m   [0m [91m      ~~~~~~~~~~~~~~~~[0m
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        2.438 s, estimated 3 s
+Ran all test suites matching session.aggregate.test.ts with tests matching "throws InvariantViolationError".

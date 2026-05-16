@@ -1,0 +1,39 @@
+
+> mind-signal-backend@1.0.0 test
+> jest session.repository.test.ts --testNamePattern=passes null subjectIndex
+
+FAIL src/06-entities/sessions/repository/session.repository.test.ts
+  SessionRepository (통합 — Mongoose Model mock)
+    ○ skipped 1. saveNew → findById 왕복 (같은 상태 복원)
+    ○ skipped 2. saveNew → findByPairingToken 왕복 (토큰 인덱스 정합)
+    ○ skipped 3. save 상태 전이 영속 (CREATED → PAIRED)
+    ○ skipped 보조: findById 미존재 시 null 반환
+    ○ skipped 보조: findByPairingToken 미존재 시 null 반환
+  SessionRepository.findByPairingToken — null hydration
+    × toAggregate passes null subjectIndex through to fromDocument (spy 검증) (20 ms)
+    ○ skipped findByPairingToken happy path — subjectIndex >= 1 doc returns Aggregate
+
+  ● SessionRepository.findByPairingToken — null hydration › toAggregate passes null subjectIndex through to fromDocument (spy 검증)
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: ObjectContaining {"subjectIndex": null}
+    Received: {"_id": "sess-legacy", "creatorId": null, "experimentMode": "DUAL", "expiresAt": 2026-05-16T02:07:23.300Z, "groupId": "grp-legacy", "pairedAt": null, "pairingToken": "LEGACY01", "status": "CREATED", "subjectIndex": 0, "userId": null}
+
+    Number of calls: 1
+
+    [0m [90m 193 |[39m     )[33m;[39m
+     [90m 194 |[39m
+    [31m[1m>[22m[39m[90m 195 |[39m     expect(fromDocSpy)[33m.[39mtoHaveBeenCalledWith(
+     [90m     |[39m                        [31m[1m^[22m[39m
+     [90m 196 |[39m       expect[33m.[39mobjectContaining({ subjectIndex[33m:[39m [36mnull[39m })
+     [90m 197 |[39m     )[33m;[39m
+     [90m 198 |[39m     [90m// afterEach jest.restoreAllMocks()가 spy 복원 담당[39m[0m
+
+      at Object.<anonymous> (src/06-entities/sessions/repository/session.repository.test.ts:195:24)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 6 skipped, 7 total
+Snapshots:   0 total
+Time:        4.831 s, estimated 5 s
+Ran all test suites matching session.repository.test.ts with tests matching "passes null subjectIndex".

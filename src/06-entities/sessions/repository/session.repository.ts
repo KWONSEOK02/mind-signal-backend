@@ -59,7 +59,7 @@ export class SessionRepository {
     return SessionAggregate.fromDocument({
       _id: String(doc._id),
       groupId: doc.groupId,
-      subjectIndex: doc.subjectIndex ?? 0,
+      subjectIndex: doc.subjectIndex, // ?? 0 fallback 제거 — null provenance 보존, invariant은 fromDocument가 검증함
       pairingToken: doc.pairingToken,
       creatorId: doc.creatorId ? String(doc.creatorId) : null,
       experimentMode: doc.experimentMode,
