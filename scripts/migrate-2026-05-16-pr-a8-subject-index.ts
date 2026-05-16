@@ -14,6 +14,7 @@
  * 실행: npm run migrate:pr-a8:dry-run  또는  npm run migrate:pr-a8:apply
  */
 
+import { setServers } from 'node:dns';
 import mongoose, { ClientSession } from 'mongoose';
 import { config } from '@07-shared/config/config';
 import { Session } from '../src/06-entities/sessions/model/session.schema';
@@ -106,6 +107,10 @@ async function reassignFromCounter(
 }
 
 async function main(mode: Mode): Promise<number> {
+  // DNS 견고화 — mongodb+srv 는 SRV+TXT 조회를 강제함. 일부 네트워크에서 Node c-ares가
+  // OS/어댑터 DNS에 querySrv ECONNREFUSED로 거부당함 (nslookup OS 경로는 정상이라 진단 혼동).
+  // public DNS 고정으로 SRV 조회 거부 우회함 — 본 머신·운영자·production apply 재현성 보장.
+  setServers(['8.8.8.8', '1.1.1.1']);
   // env 로딩 — config 모듈 경유함 (.env.local 자동 로드, AGENTS "dotenv 직접 금지 → config 경유" 정합).
   // config import 시점 REQUIRED_ENV_VARS 검증이 MONGODB_URI 미설정 시 명확 에러 throw — M3 가드 의도 보존함.
   // scripts/seeds/seed.ts 동일 패턴 정합 (config.mongoUri + mongoose.connect).
