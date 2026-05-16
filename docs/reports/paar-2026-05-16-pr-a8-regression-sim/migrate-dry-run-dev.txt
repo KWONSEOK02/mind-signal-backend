@@ -1,0 +1,11 @@
+
+> mind-signal-backend@1.0.0 migrate:pr-a8:dry-run
+> ts-node -r tsconfig-paths/register ./scripts/migrate-2026-05-16-pr-a8-subject-index.ts --dry-run
+
+Error: querySrv ECONNREFUSED _mongodb._tcp.todo-dev-cluster.1eldpej.mongodb.net
+    at QueryReqWrap.onresolve [as oncomplete] (node:internal/dns/promises:294:17) {
+  errno: undefined,
+  code: 'ECONNREFUSED',
+  syscall: 'querySrv',
+  hostname: '_mongodb._tcp.todo-dev-cluster.1eldpej.mongodb.net'
+}
