@@ -17,6 +17,7 @@ import { Types } from 'mongoose';
 import { Session } from '../model/session.schema';
 import { SessionAggregate } from '../domain/session.aggregate';
 import { SessionRepository } from './session.repository';
+import { InvariantViolationError } from '../domain/errors';
 
 jest.mock('../model/session.schema', () => ({
   Session: {
@@ -157,5 +158,63 @@ describe('SessionRepository (통합 — Mongoose Model mock)', () => {
     SessionMock.findOne.mockResolvedValueOnce(null);
     const result = await repo.findByPairingToken('NOPE000');
     expect(result).toBeNull();
+  });
+});
+
+describe('SessionRepository.findByPairingToken — null hydration', () => {
+  let repo: SessionRepository;
+  beforeEach(() => {
+    jest.clearAllMocks();
+    repo = new SessionRepository();
+  });
+  afterEach(() => {
+    // L1 amend: jest.spyOn 누수 차단 — assertion 실패 시에도 static fromDocument 복원
+    jest.restoreAllMocks();
+  });
+
+  it('toAggregate passes null subjectIndex through to fromDocument (spy 검증)', async () => {
+    const fromDocSpy = jest.spyOn(SessionAggregate, 'fromDocument');
+    const legacyDoc = {
+      _id: 'sess-legacy',
+      groupId: 'grp-legacy',
+      subjectIndex: null,
+      pairingToken: 'LEGACY01',
+      creatorId: null,
+      experimentMode: 'DUAL',
+      expiresAt: new Date(Date.now() + 60_000),
+      status: 'CREATED',
+      userId: null,
+      pairedAt: null,
+    };
+    (Session.findOne as jest.Mock).mockResolvedValue(legacyDoc);
+
+    await expect(repo.findByPairingToken('LEGACY01')).rejects.toThrow(
+      InvariantViolationError
+    );
+
+    expect(fromDocSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ subjectIndex: null })
+    );
+    // afterEach jest.restoreAllMocks()가 spy 복원 담당
+  });
+
+  it('findByPairingToken happy path — subjectIndex >= 1 doc returns Aggregate', async () => {
+    const validDoc = {
+      _id: 'sess-001',
+      groupId: 'grp-001',
+      subjectIndex: 1,
+      pairingToken: 'VALID01',
+      creatorId: null,
+      experimentMode: 'DUAL',
+      expiresAt: new Date(Date.now() + 60_000),
+      status: 'CREATED',
+      userId: null,
+      pairedAt: null,
+    };
+    (Session.findOne as jest.Mock).mockResolvedValue(validDoc);
+
+    const aggregate = await repo.findByPairingToken('VALID01');
+    expect(aggregate).toBeInstanceOf(SessionAggregate);
+    expect(aggregate?.subjectIndex).toBe(1);
   });
 });

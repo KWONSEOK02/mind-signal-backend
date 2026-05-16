@@ -1,0 +1,20 @@
+
+> mind-signal-backend@1.0.0 test
+> jest session.repository.test.ts --testNamePattern=passes null subjectIndex
+
+PASS src/06-entities/sessions/repository/session.repository.test.ts (6.036 s)
+  SessionRepository (통합 — Mongoose Model mock)
+    ○ skipped 1. saveNew → findById 왕복 (같은 상태 복원)
+    ○ skipped 2. saveNew → findByPairingToken 왕복 (토큰 인덱스 정합)
+    ○ skipped 3. save 상태 전이 영속 (CREATED → PAIRED)
+    ○ skipped 보조: findById 미존재 시 null 반환
+    ○ skipped 보조: findByPairingToken 미존재 시 null 반환
+  SessionRepository.findByPairingToken — null hydration
+    √ toAggregate passes null subjectIndex through to fromDocument (spy 검증) (19 ms)
+    ○ skipped findByPairingToken happy path — subjectIndex >= 1 doc returns Aggregate
+
+Test Suites: 1 passed, 1 total
+Tests:       6 skipped, 1 passed, 7 total
+Snapshots:   0 total
+Time:        6.338 s
+Ran all test suites matching session.repository.test.ts with tests matching "passes null subjectIndex".

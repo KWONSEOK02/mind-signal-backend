@@ -79,6 +79,8 @@ export const createGroupSessionProcess = async (
  * 1. 토큰 유효성 및 만료 확인
  * 2. 원자적 상태 변경 (CREATED -> PAIRED)
  * 3. 사용자 ID 바인딩
+ *
+ * @deprecated Use PairSubjectService.execute() instead — to be removed in Phase L
  */
 export const pairDeviceProcess = async (
   pairingToken: string,
@@ -123,16 +125,28 @@ export const pairDeviceProcess = async (
 
   // 페어링 완료 listener 호출 (LD-12 대안 D)
   // fire-and-forget — listener 내부 retry/timeout이 응답 블로킹 방지함
-  for (const cb of pairingListeners) {
-    void Promise.resolve(
-      cb({
-        groupId: session.groupId,
-        subjectIndex: session.subjectIndex,
-      })
-    ).catch((err) => {
-      console.error('pairingListener 에러:', err);
-    });
-  }
+  firePairingCompleteListeners(session.groupId, session.subjectIndex);
 
   return saved;
 };
+
+/**
+ * 페어링 완료 listener 발화 helper — HOLD-1 β G9 예외 (ADR-008 §2)
+ *
+ * 행위 동등성 3조건 (mechanical refactor 보장 — baseline 정합):
+ *  1. 동일 Set(`pairingListeners`) 순회함
+ *  2. 동일 `void Promise.resolve(cb({...})).catch(console.error)` 패턴 사용함
+ *  3. 동일 인자 shape (`{groupId, subjectIndex}`) 전달함 (PairingCallback type 정합)
+ *
+ * async rejection best-effort catch; sync throw behavior intentionally preserved until Phase L
+ */
+export function firePairingCompleteListeners(
+  groupId: string,
+  subjectIndex: number | null
+): void {
+  for (const cb of pairingListeners) {
+    void Promise.resolve(cb({ groupId, subjectIndex })).catch((err) => {
+      console.error('pairingListener 에러:', err);
+    });
+  }
+}

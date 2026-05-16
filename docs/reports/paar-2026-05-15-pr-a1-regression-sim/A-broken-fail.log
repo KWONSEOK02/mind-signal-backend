@@ -1,0 +1,78 @@
+
+> mind-signal-backend@1.0.0 test
+> jest session.routes.psa1.test.ts
+
+  console.log
+    [dotenv@17.2.3] injecting env (8) from .env.test -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+
+      at _log (node_modules/dotenv/lib/main.js:142:11)
+
+  console.log
+    현재 구동 환경: test
+
+      at Object.<anonymous> (src/07-shared/config/config.ts:96:9)
+
+  console.log
+    연결된 DB URI: mongodb+srv://gwonseok02:***@todo-dev-cluster.1eldpej.mongodb.net/mind_signal_dev?retryWrites=true&w=majority&appName=todo-dev-cluster
+
+      at Object.<anonymous> (src/07-shared/config/config.ts:97:9)
+
+FAIL src/05-features/sessions/api/session.routes.psa1.test.ts (10.827 s)
+  POST /api/sessions/:pairingToken/pair (PSA1 E2E)
+    × E2E-A: 정상 페어링 시 200 + DTO + listener fire 1회 (controller→helper 검증) (93 ms)
+    × E2E-B: 만료 토큰 페어링 시 401 한국어 응답 + listener 0회 (14 ms)
+
+  ● POST /api/sessions/:pairingToken/pair (PSA1 E2E) › E2E-A: 정상 페어링 시 200 + DTO + listener fire 1회 (controller→helper 검증)
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 3
+    + Received  + 3
+
+    @@ -2,10 +2,10 @@
+        "creatorId": Any<String>,
+        "experimentMode": "DUAL_2PC",
+        "groupId": Any<String>,
+        "id": Any<String>,
+        "measuredAt": null,
+    -   "pairedAt": Any<String>,
+    -   "status": "PAIRED",
+    +   "pairedAt": null,
+    +   "status": "CREATED",
+        "subjectIndex": Any<Number>,
+    -   "userId": Any<String>,
+    +   "userId": null,
+      }
+
+    [0m [90m 125 |[39m     [90m// Assert — 200 + DTO shape 검증[39m
+     [90m 126 |[39m     expect(res[33m.[39mstatus)[33m.[39mtoBe([35m200[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     expect(res[33m.[39mbody[33m.[39mdata)[33m.[39mtoMatchObject({
+     [90m     |[39m                           [31m[1m^[22m[39m
+     [90m 128 |[39m       id[33m:[39m expect[33m.[39many([33mString[39m)[33m,[39m
+     [90m 129 |[39m       groupId[33m:[39m expect[33m.[39many([33mString[39m)[33m,[39m
+     [90m 130 |[39m       subjectIndex[33m:[39m expect[33m.[39many([33mNumber[39m)[33m,[39m[0m
+
+      at Object.<anonymous> (src/05-features/sessions/api/session.routes.psa1.test.ts:127:27)
+
+  ● POST /api/sessions/:pairingToken/pair (PSA1 E2E) › E2E-B: 만료 토큰 페어링 시 401 한국어 응답 + listener 0회
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 401
+    Received: 200
+
+    [0m [90m 170 |[39m
+     [90m 171 |[39m     [90m// Assert — 401 + 한국어 메시지[39m
+    [31m[1m>[22m[39m[90m 172 |[39m     expect(res[33m.[39mstatus)[33m.[39mtoBe([35m401[39m)[33m;[39m
+     [90m     |[39m                        [31m[1m^[22m[39m
+     [90m 173 |[39m     expect(res[33m.[39mbody[33m.[39mmessage)[33m.[39mtoBe(
+     [90m 174 |[39m       [32m'페어링 토큰이 만료되었습니다. 다시 시도해주세요.'[39m
+     [90m 175 |[39m     )[33m;[39m[0m
+
+      at Object.<anonymous> (src/05-features/sessions/api/session.routes.psa1.test.ts:172:24)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 total
+Snapshots:   0 total
+Time:        11.457 s, estimated 13 s
+Ran all test suites matching session.routes.psa1.test.ts.

@@ -1,0 +1,29 @@
+
+> mind-signal-backend@1.0.0 test
+> jest session.routes.psa1.test.ts
+
+  console.log
+    [dotenv@17.2.3] injecting env (8) from .env.test -- tip: ⚙️  override existing env vars with { override: true }
+
+      at _log (node_modules/dotenv/lib/main.js:142:11)
+
+  console.log
+    현재 구동 환경: test
+
+      at Object.<anonymous> (src/07-shared/config/config.ts:96:9)
+
+  console.log
+    연결된 DB URI: mongodb+srv://gwonseok02:***@todo-dev-cluster.1eldpej.mongodb.net/mind_signal_dev?retryWrites=true&w=majority&appName=todo-dev-cluster
+
+      at Object.<anonymous> (src/07-shared/config/config.ts:97:9)
+
+PASS src/05-features/sessions/api/session.routes.psa1.test.ts (9.374 s)
+  POST /api/sessions/:pairingToken/pair (PSA1 E2E)
+    √ E2E-A: 정상 페어링 시 200 + DTO + listener fire 1회 (controller→helper 검증) (107 ms)
+    √ E2E-B: 만료 토큰 페어링 시 401 한국어 응답 + listener 0회 (13 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        10.052 s
+Ran all test suites matching session.routes.psa1.test.ts.
