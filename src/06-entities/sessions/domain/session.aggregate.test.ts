@@ -5,7 +5,10 @@
  * DOMAIN-MODEL-NOTES §3.1 정합 / PLAN rev.3 §6.2 시나리오 8건.
  */
 
-import { SessionAggregate, type SessionAggregateDocumentFields } from './session.aggregate';
+import {
+  SessionAggregate,
+  type SessionAggregateDocumentFields,
+} from './session.aggregate';
 import {
   InvariantViolationError,
   InvalidStatusTransitionError,
