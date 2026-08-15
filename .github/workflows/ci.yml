@@ -11,12 +11,8 @@ jobs:
   # GitHub Settings에서 'build-and-test'를 필수 체크 항목으로 등록해야 함
   build-and-test:
     runs-on: ubuntu-latest
-    env:
-      BEDROCK_ACCESS_KEY_ID: ${{ secrets.BEDROCK_ACCESS_KEY_ID }}
-      BEDROCK_SECRET_ACCESS_KEY: ${{ secrets.BEDROCK_SECRET_ACCESS_KEY }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      BEDROCK_MODEL_ID: ${{ secrets.BEDROCK_MODEL_ID }}
-      BEDROCK_INFERENCE_PROFILE_ID: ${{ secrets.BEDROCK_INFERENCE_PROFILE_ID }}
+    # Bedrock 자격증명은 주입하지 않음 — 테스트가 SDK를 mock하므로 불필요하고,
+    # job-level env는 npm install의 서드파티 postinstall까지 읽을 수 있음
 
     steps:
       - name: Checkout code

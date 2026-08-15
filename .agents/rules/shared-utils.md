@@ -38,7 +38,9 @@ config.isProduction  // boolean
 config.redis         // { url } — REDIS_URL, else redis://HOST:PORT fallback
 config.dataEngine    // { path, baseUrl, pythonBin, secretKey } — Python engine
                      // pythonBin from DATA_ENGINE_PYTHON (default 'python')
-config.geminiApiKeys // string[] — GOOGLE_API_KEY1/2/3, not a single key
+config.bedrock       // { region, accessKeyId, secretAccessKey, modelId } — chat LLM
+                     // modelId prefers BEDROCK_INFERENCE_PROFILE_ID, else BEDROCK_MODEL_ID
+config.chatOnly      // boolean — CHAT_ONLY_MODE, local chat-only run (no Mongo/Socket)
 config.adminEmails   // string[] — ADMIN_EMAILS, lowercase-normalized allowlist
 ```
 

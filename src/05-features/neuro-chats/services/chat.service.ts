@@ -101,7 +101,8 @@ export const chatService = {
       knowledgeBase
     )
       .replace('{keywords}', keywords)
-      .replace('{analysisMarkdown}', analysisSection);
+      // DB 콘텐츠라 $&, $` 같은 특수 치환 패턴을 막기 위해 함수형으로 넘김
+      .replace('{analysisMarkdown}', () => analysisSection);
 
     try {
       const client = new BedrockRuntimeClient({
