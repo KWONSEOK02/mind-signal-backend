@@ -70,4 +70,19 @@ describe('chatService.callLLM — Amazon Bedrock 연동 검증함', () => {
     });
     consoleError.mockRestore();
   });
+
+  it('알 수 없는 Keyword 제어 표식을 사용자 응답으로 노출하지 않음', async () => {
+    mockSend.mockResolvedValue({
+      output: { message: { content: [{ text: 'Keyword: 없는페이지' }] } },
+    });
+
+    const result = await chatService.callLLM('없는 페이지로 이동해 주세요');
+
+    expect(result).toEqual({
+      status: 'success',
+      message: '죄송합니다. 요청하신 질문에 대해 답변을 찾지 못했습니다.',
+      url: '',
+      level: 3,
+    });
+  });
 });

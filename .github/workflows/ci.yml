@@ -11,6 +11,12 @@ jobs:
   # GitHub Settings에서 'build-and-test'를 필수 체크 항목으로 등록해야 함
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      BEDROCK_ACCESS_KEY_ID: ${{ secrets.BEDROCK_ACCESS_KEY_ID }}
+      BEDROCK_SECRET_ACCESS_KEY: ${{ secrets.BEDROCK_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      BEDROCK_MODEL_ID: ${{ secrets.BEDROCK_MODEL_ID }}
+      BEDROCK_INFERENCE_PROFILE_ID: ${{ secrets.BEDROCK_INFERENCE_PROFILE_ID }}
 
     steps:
       - name: Checkout code

@@ -61,7 +61,7 @@ export const chatService = {
 
     // 2. 로그인한 사용자의 groupId에 한해 DB에서 분석 markdown 조회함
     let analysisMarkdown: string | undefined;
-    if (groupId && userId) {
+    if (!config.chatOnly && groupId && userId) {
       const result = await AnalysisResult.findOne({
         groupId,
         $or: [{ user1Id: userId }, { user2Id: userId }],
@@ -126,8 +126,9 @@ export const chatService = {
         return DEFAULT_RESPONSE;
       }
 
-      if (rawResult.startsWith('Keyword:')) {
-        const keyword = rawResult.slice('Keyword:'.length).trim();
+      const keywordMatch = rawResult.match(/^\s*keyword\s*:\s*([^\r\n]+)/i);
+      if (keywordMatch) {
+        const keyword = keywordMatch[1].trim();
         if (keyword && searchPreList[keyword]) {
           return {
             status: 'success',
@@ -148,6 +149,9 @@ export const chatService = {
             level: 1,
           };
         }
+
+        // 내부 제어 표식이 사용자에게 그대로 노출되지 않도록 처리함
+        return DEFAULT_RESPONSE;
       }
 
       return { status: 'success', message: rawResult, url: '', level: 2 };

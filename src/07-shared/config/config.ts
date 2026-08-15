@@ -1,19 +1,21 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-// 1. 환경별 .env 파일 로드 (.env.local, .env.development, .env.test 등)
+// 1. 백엔드 전용 환경 파일 로드 (.env.local, .env.development, .env.test 등)
 const nodeEnv = process.env.NODE_ENV || 'local';
 const envPath = path.resolve(__dirname, `../../../.env.${nodeEnv}`);
-const workspaceEnvPath = path.resolve(__dirname, '../../../../.env');
+const localEnvPath = path.resolve(__dirname, '../../../.env.local');
+const envPaths = nodeEnv === 'local' ? [envPath] : [envPath, localEnvPath];
 
-// 백엔드 전용 환경 파일을 우선하고, 워크스페이스 루트 .env는 로컬 개발용으로 보조 로드함
-dotenv.config({ path: [envPath, workspaceEnvPath] });
+// 테스트 환경은 .env.test를 우선하고 로컬 값은 보조로만 로드함
+dotenv.config({ path: envPaths });
 
 // 2. 필수 환경변수 목록 정의
 const REQUIRED_ENV_VARS = ['MONGODB_URI', 'JWT_SECRET_KEY', 'JWT_EXPIRES_IN'];
+const chatOnly = process.env.CHAT_ONLY_MODE === 'true';
 
 // 3. 누락된 환경변수 검사 (production/staging 환경에서 특히 중요)
-if (nodeEnv !== 'test') {
+if (nodeEnv !== 'test' && !chatOnly) {
   REQUIRED_ENV_VARS.forEach((key) => {
     if (!process.env[key]) {
       throw new Error(
@@ -41,6 +43,7 @@ export const config = {
   env: nodeEnv,
   port: parseInt(process.env.PORT || '5000', 10),
   mongoUri: process.env.MONGODB_URI as string,
+  chatOnly,
   bedrock: {
     region: process.env.AWS_REGION ?? '',
     accessKeyId: process.env.BEDROCK_ACCESS_KEY_ID,
