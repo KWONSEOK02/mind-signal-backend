@@ -14,7 +14,7 @@ import { chatMessageSchema, chatAskSchema } from './chat.schema';
 import { optionalAuthenticate, validate } from '@07-shared/middlewares';
 import { handleChat, handleAskChat } from './chat.controller';
 
-// chatService 모킹 — 외부 인프라(Gemini, MongoDB, SMTP) 의존 제거
+// chatService 모킹 — 외부 인프라(Bedrock, MongoDB, SMTP) 의존 제거
 jest.mock('../services/chat.service', () => ({
   chatService: {
     processMessage: jest

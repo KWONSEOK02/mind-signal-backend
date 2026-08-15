@@ -6,7 +6,7 @@
     "node": ">=20.10.0"
   },
   "scripts": {
-    "dev": "open-cli http://localhost:5000/api-docs && ts-node-dev --respawn --transpile-only -r tsconfig-paths/register ./src/01-app/app.ts",
+    "dev": "ts-node-dev --respawn --transpile-only -r tsconfig-paths/register ./src/01-app/app.ts",
     "build": "tsc && tsc-alias",
     "start": "node -r tsconfig-paths/register ./dist/01-app/app.js",
     "test": "jest",
@@ -30,8 +30,7 @@
   },
   "description": "Mind Signal Project Backend",
   "dependencies": {
-    "@google/genai": "^1.34.0",
-    "@google/generative-ai": "^0.24.1",
+    "@aws-sdk/client-bedrock-runtime": "^3.1111.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
