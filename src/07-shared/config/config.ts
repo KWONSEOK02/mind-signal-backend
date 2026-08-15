@@ -4,16 +4,13 @@ import path from 'path';
 // 1. 환경별 .env 파일 로드 (.env.local, .env.development, .env.test 등)
 const nodeEnv = process.env.NODE_ENV || 'local';
 const envPath = path.resolve(__dirname, `../../../.env.${nodeEnv}`);
-dotenv.config({ path: envPath });
+const workspaceEnvPath = path.resolve(__dirname, '../../../../.env');
+
+// 백엔드 전용 환경 파일을 우선하고, 워크스페이스 루트 .env는 로컬 개발용으로 보조 로드함
+dotenv.config({ path: [envPath, workspaceEnvPath] });
 
 // 2. 필수 환경변수 목록 정의
-const REQUIRED_ENV_VARS = [
-  'MONGODB_URI',
-  'JWT_SECRET_KEY',
-  'JWT_EXPIRES_IN',
-  //'GOOGLE_API_KEY',
-  //'GEMINI_API_KEY',
-];
+const REQUIRED_ENV_VARS = ['MONGODB_URI', 'JWT_SECRET_KEY', 'JWT_EXPIRES_IN'];
 
 // 3. 누락된 환경변수 검사 (production/staging 환경에서 특히 중요)
 if (nodeEnv !== 'test') {
@@ -44,12 +41,13 @@ export const config = {
   env: nodeEnv,
   port: parseInt(process.env.PORT || '5000', 10),
   mongoUri: process.env.MONGODB_URI as string,
-  googleApiKey: process.env.GOOGLE_API_KEY as string,
-  geminiApiKeys: [
-    process.env.GOOGLE_API_KEY1 as string,
-    process.env.GOOGLE_API_KEY2 as string,
-    process.env.GOOGLE_API_KEY3 as string,
-  ],
+  bedrock: {
+    region: process.env.AWS_REGION ?? '',
+    accessKeyId: process.env.BEDROCK_ACCESS_KEY_ID,
+    secretAccessKey: process.env.BEDROCK_SECRET_ACCESS_KEY,
+    modelId:
+      process.env.BEDROCK_INFERENCE_PROFILE_ID ?? process.env.BEDROCK_MODEL_ID,
+  },
 
   jwtSecret: {
     secret: process.env.JWT_SECRET_KEY as string,

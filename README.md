@@ -28,7 +28,7 @@ Emotiv 헤드셋 → Emotiv App → Python Data Engine (spawn)
 | **Validation** | `Zod` DTO |
 | **Test** | `Jest`, `Supertest` |
 | **Quality** | `ESLint`, `Prettier`, `tsc-alias` |
-| **External Services** | Python Data Engine (`FastAPI` via HTTP proxy), `Google Gemini` |
+| **External Services** | Python Data Engine (`FastAPI` via HTTP proxy), Amazon Bedrock |
 | **DevOps** | `Heroku` |
 
 ---
