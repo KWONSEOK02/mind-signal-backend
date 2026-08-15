@@ -1,22 +1,31 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-// 1. 환경별 .env 파일 로드 (.env.local, .env.development, .env.test 등)
+// 1. 백엔드 전용 환경 파일 로드 (.env.local, .env.development, .env.test 등)
 const nodeEnv = process.env.NODE_ENV || 'local';
 const envPath = path.resolve(__dirname, `../../../.env.${nodeEnv}`);
-dotenv.config({ path: envPath });
+const localEnvPath = path.resolve(__dirname, '../../../.env.local');
+// development만 .env.local을 보조로 읽음. test는 격리를 위해, production은
+// 서버에 남은 로컬 파일 유입 차단을 위해 각자 환경 파일만 사용함
+const envPaths =
+  nodeEnv === 'development' ? [envPath, localEnvPath] : [envPath];
+
+dotenv.config({ path: envPaths });
 
 // 2. 필수 환경변수 목록 정의
-const REQUIRED_ENV_VARS = [
-  'MONGODB_URI',
-  'JWT_SECRET_KEY',
-  'JWT_EXPIRES_IN',
-  //'GOOGLE_API_KEY',
-  //'GEMINI_API_KEY',
-];
+const REQUIRED_ENV_VARS = ['MONGODB_URI', 'JWT_SECRET_KEY', 'JWT_EXPIRES_IN'];
+const chatOnly = process.env.CHAT_ONLY_MODE === 'true';
+
+// chat-only는 로컬 확인용임. production에서 켜지면 auth·측정·분석 API가 통째로
+// 언마운트된 채 정상 기동한 것처럼 보이므로 startup fail-fast 처리함
+if (chatOnly && nodeEnv === 'production') {
+  throw new Error(
+    'Critical Error: CHAT_ONLY_MODE는 production에서 사용할 수 없습니다.'
+  );
+}
 
 // 3. 누락된 환경변수 검사 (production/staging 환경에서 특히 중요)
-if (nodeEnv !== 'test') {
+if (nodeEnv !== 'test' && !chatOnly) {
   REQUIRED_ENV_VARS.forEach((key) => {
     if (!process.env[key]) {
       throw new Error(
@@ -44,12 +53,16 @@ export const config = {
   env: nodeEnv,
   port: parseInt(process.env.PORT || '5000', 10),
   mongoUri: process.env.MONGODB_URI as string,
-  googleApiKey: process.env.GOOGLE_API_KEY as string,
-  geminiApiKeys: [
-    process.env.GOOGLE_API_KEY1 as string,
-    process.env.GOOGLE_API_KEY2 as string,
-    process.env.GOOGLE_API_KEY3 as string,
-  ],
+  chatOnly,
+  bedrock: {
+    region: process.env.AWS_REGION ?? '',
+    accessKeyId: process.env.BEDROCK_ACCESS_KEY_ID,
+    secretAccessKey: process.env.BEDROCK_SECRET_ACCESS_KEY,
+    // 빈 문자열도 미설정으로 취급해야 함 — .env.example이 profile을 빈 값으로
+    // 배포하므로 ??를 쓰면 modelId가 ''가 되어 모델 ID 폴백이 죽음
+    modelId:
+      process.env.BEDROCK_INFERENCE_PROFILE_ID || process.env.BEDROCK_MODEL_ID,
+  },
 
   jwtSecret: {
     secret: process.env.JWT_SECRET_KEY as string,

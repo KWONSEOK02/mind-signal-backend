@@ -25,7 +25,13 @@ registerStatic(app);
 // 대시보드용 집계 헬스체크 (root 레벨, CORS 불필요).
 // 운영 정보(redis 상태, 내부 서비스 가용성) 노출 방지를 위해 비-production에서만 등록함.
 if (!config.isProduction) {
-  app.get('/health', healthCheck);
+  if (config.chatOnly) {
+    app.get('/health', (_req, res) => {
+      res.status(200).json({ status: 'success', data: { mode: 'chat-only' } });
+    });
+  } else {
+    app.get('/health', healthCheck);
+  }
   // 진단 대시보드 API (groupId 일치확인 + 수정 액션) — localhost 전용, dev 전용
   app.get('/diag', diagStatus);
   app.post('/diag/action/:name', diagAction);
@@ -59,7 +65,25 @@ const globalErrorHandler: ErrorRequestHandler = (error, req, res, _next) => {
 // 타입이 지정된 에러 핸들러를 등록한다.
 app.use(globalErrorHandler);
 
+/** HTTP와 Socket 서버를 시작함 */
+function startServer() {
+  const PORT = Number(config.port) || 5000;
+  const server = http.createServer(app);
+  if (!config.chatOnly) {
+    SocketService.init(server);
+  }
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`API running at http://localhost:${PORT}`);
+  });
+}
+
 async function connectDB() {
+  if (config.chatOnly) {
+    console.log('CHAT_ONLY_MODE 활성화됨: MongoDB 없이 채팅 API만 시작함');
+    startServer();
+    return;
+  }
+
   try {
     const mongoURI = config.mongoUri;
     if (!mongoURI) {
@@ -98,12 +122,7 @@ async function connectDB() {
       console.error('MongoDB 연결 에러:', err);
     });
 
-    const PORT = Number(config.port) || 5000;
-    const server = http.createServer(app);
-    SocketService.init(server);
-    server.listen(PORT, '0.0.0.0', () => {
-      console.log(`API running at http://localhost:${PORT}`);
-    });
+    startServer();
   } catch (err) {
     console.error('서버 시작 중 오류:', err);
     process.exit(1);
