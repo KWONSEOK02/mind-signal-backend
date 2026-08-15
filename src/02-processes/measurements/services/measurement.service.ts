@@ -329,6 +329,10 @@ function startDualMeasurement(groupId: string): void {
         timestamp_ms: Date.now(),
       });
     } catch (err) {
+      // 취소 사유를 stopReason='ProcessError' 하나로만 남기면 원인 추적이 불가능함.
+      // 2026-08-05 실기기 회차에서 이 catch가 탔으나 어디에도 흔적이 없어
+      // 원인 특정에 실패함 (backend #89)
+      console.error(`[DUAL_2PC 실패] groupId=${groupId}`, err);
       // T4 fix: 반쪽 등록 잔류 방지 — dualRegistry cleanup 호출함 (LD-4)
       engineRegistryService.cleanupGroup(groupId);
       // 실패 통보 (60초 timeout + streamStart 실패 포함)
