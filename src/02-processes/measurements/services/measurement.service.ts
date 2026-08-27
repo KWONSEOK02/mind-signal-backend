@@ -67,6 +67,10 @@ export const resetActiveDualGroup = (): void => {
  */
 async function subscribeWithAligner(groupId: string): Promise<void> {
   const subscribers: RedisClientType[] = [];
+  // SESSION-W005: 배열을 비어 있을 때 미리 등록함. 참조를 공유하므로 push 즉시
+  // 추적됨 — 루프 끝에서 등록하면 두 번째 구독자가 실패할 때 첫 번째가 어느
+  // 맵에도 없는 고아가 되어 unsubscribeGroupChannels가 찾지 못함
+  groupSubscribers.set(groupId, subscribers);
   const healthTracker = new StreamHealthTracker(groupId);
   groupHealthTrackers.set(groupId, healthTracker);
 
@@ -121,7 +125,6 @@ async function subscribeWithAligner(groupId: string): Promise<void> {
     });
     subscribers.push(subscriber);
   }
-  groupSubscribers.set(groupId, subscribers);
 
   // v9 R9-H-2: flush 호출 주체는 subscribeWithAligner 내부 setInterval(100)
   // unsubscribeGroupChannels에서 clearInterval 처리
@@ -148,6 +151,10 @@ async function unsubscribeGroupChannels(groupId: string): Promise<void> {
     clearInterval(intervalId);
     groupFlushIntervals.delete(groupId);
   }
+
+  // SESSION-W005: 건강 추적기는 구독자보다 먼저 등록되므로, 구독자 목록이
+  // 없다고 조기 반환하면 추적기가 남는다. 반환 전에 먼저 지움
+  groupHealthTrackers.delete(groupId);
 
   const subscribers = groupSubscribers.get(groupId);
   if (!subscribers) return;
@@ -333,6 +340,30 @@ function startDualMeasurement(groupId: string): void {
       // 2026-08-05 실기기 회차에서 이 catch가 탔으나 어디에도 흔적이 없어
       // 원인 특정에 실패함 (backend #89)
       console.error(`[DUAL_2PC 실패] groupId=${groupId}`, err);
+
+      // SESSION-W005: 이미 시작된 원격 엔진을 먼저 세움. cleanupGroup이
+      // dualRegistry를 지우면 streamStop이 engineUrl을 찾지 못해 legacy 폴백
+      // 503이 되므로, 반드시 cleanupGroup보다 앞이어야 함.
+      // 애초에 시작하지 못한 엔진이거나 이미 죽었을 수 있어 실패는 흡수함
+      const { engineProxyService: proxyForStop } =
+        await import('@02-processes/engine/services/engine-proxy.service');
+      for (const subjectIndex of [1, 2]) {
+        try {
+          await proxyForStop.streamStop(groupId, subjectIndex);
+        } catch (stopErr) {
+          console.warn(
+            `[DUAL_2PC 실패] subject ${subjectIndex} streamStop 실패 (무시)`,
+            stopErr
+          );
+        }
+      }
+
+      // SESSION-W005: 정상 종료 경로(:182-184)는 셋을 다 회수하는데 이 catch는
+      // cleanupGroup 하나만 불러 flush interval과 구독자와 aligner가 잔존했음.
+      // 취소 뒤에도 checkStale이 계속 돌아 유령 stale 배너가 뜬 원인
+      await unsubscribeGroupChannels(groupId);
+      timestampAlignerRegistry.cleanup(groupId);
+
       // T4 fix: 반쪽 등록 잔류 방지 — dualRegistry cleanup 호출함 (LD-4)
       engineRegistryService.cleanupGroup(groupId);
       // 실패 통보 (60초 timeout + streamStart 실패 포함)
