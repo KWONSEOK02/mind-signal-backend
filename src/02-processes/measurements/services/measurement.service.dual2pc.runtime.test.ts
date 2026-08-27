@@ -719,4 +719,30 @@ describe('[SESSION-W005] DUAL_2PC 실패 경로 자원 회수', () => {
     const firstCleanup = Math.min(...cleanupSpy.mock.invocationCallOrder);
     expect(firstStop).toBeLessThan(firstCleanup);
   });
+
+  // registrationTimeoutMs(5000) 가 실제로 만료되어야 catch 가 타므로 여유를 둠
+  it('R4 그룹 등록이 없으면 streamStop 을 아예 부르지 않음', async () => {
+    // Arrange — DE 를 등록하지 않음. waitForBothEngines 가 timeout 으로 실패함.
+    // 이때 streamStop 을 부르면 getByGroup 이 undefined 라 legacy 단일 슬롯
+    // URL 로 폴백하고(engine-proxy.service.ts:194-199), 그 슬롯이 차 있으면
+    // 무관한 1PC 측정에 종료 요청이 나간다 (engine-registry.service.ts:49-53 은
+    // 슬롯이 비었을 때만 503 을 던짐)
+    const { engineProxyService } = jest.requireMock(
+      '@02-processes/engine/services/engine-proxy.service'
+    );
+
+    // Act — 등록 없이 시작. registrationTimeoutMs(5000) 만료 후 catch 진입함
+    await startDualMeasurementByGroup(GROUP_ID);
+    await new Promise<void>((r) => setTimeout(r, 6000));
+
+    // 전제 확인 — catch 가 실제로 탔는지 먼저 본다. 안 탔으면 이 테스트는 무의미함
+    expect(SocketService.emitToGroup).toHaveBeenCalledWith(
+      GROUP_ID,
+      'dual-session-failed',
+      expect.anything()
+    );
+
+    // Assert — 등록이 없으므로 정지 대상도 없음
+    expect(engineProxyService.streamStop).not.toHaveBeenCalled();
+  }, 15000);
 });

@@ -344,17 +344,24 @@ function startDualMeasurement(groupId: string): void {
       // SESSION-W005: 이미 시작된 원격 엔진을 먼저 세움. cleanupGroup이
       // dualRegistry를 지우면 streamStop이 engineUrl을 찾지 못해 legacy 폴백
       // 503이 되므로, 반드시 cleanupGroup보다 앞이어야 함.
-      // 애초에 시작하지 못한 엔진이거나 이미 죽었을 수 있어 실패는 흡수함
-      const { engineProxyService: proxyForStop } =
-        await import('@02-processes/engine/services/engine-proxy.service');
-      for (const subjectIndex of [1, 2]) {
-        try {
-          await proxyForStop.streamStop(groupId, subjectIndex);
-        } catch (stopErr) {
-          console.warn(
-            `[DUAL_2PC 실패] subject ${subjectIndex} streamStop 실패 (무시)`,
-            stopErr
-          );
+      // 애초에 시작하지 못한 엔진이거나 이미 죽었을 수 있어 실패는 흡수함.
+      // 등록된 subject만 대상으로 함 — dualRegistry에 그룹이 없으면
+      // streamStop이 legacy 단일 슬롯 URL로 폴백해(engine-proxy.service.ts:194-199)
+      // 무관한 1PC 측정에 종료 요청이 나감. getEngineUrl은 슬롯이 비었을 때만
+      // 503을 던지므로(engine-registry.service.ts:49-53) 차 있으면 실제로 나감
+      const registrations = engineRegistryService.getByGroup(groupId);
+      if (registrations) {
+        const { engineProxyService: proxyForStop } =
+          await import('@02-processes/engine/services/engine-proxy.service');
+        for (const subjectIndex of registrations.keys()) {
+          try {
+            await proxyForStop.streamStop(groupId, subjectIndex);
+          } catch (stopErr) {
+            console.warn(
+              `[DUAL_2PC 실패] subject ${subjectIndex} streamStop 실패 (무시)`,
+              stopErr
+            );
+          }
         }
       }
 
