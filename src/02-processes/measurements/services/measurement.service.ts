@@ -79,6 +79,11 @@ async function subscribeWithAligner(groupId: string): Promise<void> {
   for (const subjectIndex of [1, 2]) {
     const subscriber = redisService.client.duplicate() as RedisClientType;
     await subscriber.connect();
+    // SESSION-W005 후속: connect 직후에 등록함. subscribe 뒤에 등록하면 구독에
+    // 실패한 구독자가 TCP 를 연 채 배열에 없어 회수 대상에서 빠진다.
+    // "배열에 있음 = 연결이 존재함" 불변식을 유지해 회수 책임을
+    // unsubscribeGroupChannels 한 곳에 남긴다
+    subscribers.push(subscriber);
     const channel = `mind-signal:${groupId}:subject:${subjectIndex}`;
     await subscriber.subscribe(channel, (message: string) => {
       try {
@@ -123,7 +128,6 @@ async function subscribeWithAligner(groupId: string): Promise<void> {
         console.error(`DUAL_2PC ${channel} parse error:`, err);
       }
     });
-    subscribers.push(subscriber);
   }
 
   // v9 R9-H-2: flush 호출 주체는 subscribeWithAligner 내부 setInterval(100)

@@ -675,8 +675,8 @@ describe('[SESSION-W005] DUAL_2PC 실패 경로 자원 회수', () => {
 
   it('R2 두 번째 구독자 연결 실패 시 첫 번째 구독자도 회수함', async () => {
     // Arrange — 두 번째 subscriber 의 subscribe 만 실패시킴.
-    // 현재 groupSubscribers.set 이 for 루프 뒤에 있어, 첫 subscriber 가
-    // 어느 맵에도 없는 고아가 된다.
+    // groupSubscribers.set 은 W005 에서 루프 앞으로 옮겼다(service:73).
+    // 첫 subscriber 가 어느 맵에도 없는 고아가 되던 회귀의 가드다.
     const subs = trackSubscribers([
       {},
       { subscribe: jest.fn().mockRejectedValue(new Error('구독 실패 주입임')) },
@@ -691,6 +691,29 @@ describe('[SESSION-W005] DUAL_2PC 실패 경로 자원 회수', () => {
     expect(subs.length).toBeGreaterThanOrEqual(2);
     expect(subs[0].unsubscribe).toHaveBeenCalled();
     expect(subs[0].quit).toHaveBeenCalled();
+  });
+
+  it('R5 subscribe 에 실패한 구독자 자신도 회수함', async () => {
+    // Arrange — R2 와 같은 주입이지만 단언 대상이 실패한 구독자 본인이다.
+    // push 가 subscribe 뒤에 있으면 이 구독자는 connect 로 TCP 를 연 채
+    // 배열에 들어가지 못해 unsubscribeGroupChannels 가 영영 회수하지 못한다.
+    const subs = trackSubscribers([
+      {},
+      { subscribe: jest.fn().mockRejectedValue(new Error('구독 실패 주입임')) },
+    ]);
+    registerBothEngines(GROUP_ID);
+
+    // Act
+    await startDualMeasurementByGroup(GROUP_ID);
+    await new Promise<void>((r) => setTimeout(r, 250));
+
+    // Assert — 전제: 두 번째 구독자가 실제로 connect 까지 갔다
+    expect(subs.length).toBeGreaterThanOrEqual(2);
+    expect(subs[1].connect).toHaveBeenCalled();
+
+    // Assert — 실패한 그 구독자도 회수돼야 하고, 이중 회수는 없어야 함
+    expect(subs[1].unsubscribe).toHaveBeenCalledTimes(1);
+    expect(subs[1].quit).toHaveBeenCalledTimes(1);
   });
 
   it('R3 실패 시 원격 엔진을 먼저 세우고 그다음 registry 를 지움', async () => {
