@@ -707,9 +707,11 @@ describe('[SESSION-W005] DUAL_2PC 실패 경로 자원 회수', () => {
     await startDualMeasurementByGroup(GROUP_ID);
     await new Promise<void>((r) => setTimeout(r, 250));
 
-    // Assert — 전제: 두 번째 구독자가 실제로 connect 까지 갔다
+    // Assert — 전제: 두 번째 구독자가 connect 를 지나 subscribe 에서 실패했다.
+    // 이걸 먼저 박지 않으면 다른 초기화 오류로 정리가 돌아도 통과한다
     expect(subs.length).toBeGreaterThanOrEqual(2);
     expect(subs[1].connect).toHaveBeenCalled();
+    expect(subs[1].subscribe).toHaveBeenCalledTimes(1);
 
     // Assert — 실패한 그 구독자도 회수돼야 하고, 이중 회수는 없어야 함
     expect(subs[1].unsubscribe).toHaveBeenCalledTimes(1);
