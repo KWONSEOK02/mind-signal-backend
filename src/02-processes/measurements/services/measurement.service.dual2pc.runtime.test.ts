@@ -330,6 +330,48 @@ describe('DUAL_2PC 측정 라이프사이클 회귀 재현', () => {
     }
   });
 
+  // 회귀 재현: 수신 카운터 키를 첫 프레임에서 만들면 한 번도 샘플을 못 보낸
+  // subject 가 요약에서 통째로 빠진다. 이 테스트의 redis mock 은 구독 콜백을
+  // 한 번도 부르지 않으므로 두 subject 모두 무수신이고, 수정 전에는 요약 줄
+  // 자체가 안 나온다. 침묵을 보이게 하려는 이 로그의 목적이 걸린 지점이다
+  // (CodeRabbit PR #102)
+  it('샘플을 한 번도 못 받은 subject도 요약에 0으로 나옴', async () => {
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.useFakeTimers();
+    try {
+      (Session.findById as jest.Mock).mockResolvedValue(
+        makeDualSession(GROUP_ID)
+      );
+      engineRegistryService.registerDual(
+        GROUP_ID,
+        1,
+        'http://de1:5002',
+        ENGINE_SECRET
+      );
+      engineRegistryService.registerDual(
+        GROUP_ID,
+        2,
+        'http://de2:5002',
+        ENGINE_SECRET
+      );
+
+      await startMeasurementService('session-id-001');
+      // 요약 주기(10초)를 넘겨 진행시킴. 실제 대기 없이 타이머만 앞당김
+      await jest.advanceTimersByTimeAsync(10_200);
+
+      const lines = logSpy.mock.calls.map((args) => args.map(String).join(' '));
+      const summary = lines.find((l) =>
+        l.includes(`DUAL_2PC ${GROUP_ID} 수신 요약`)
+      );
+      expect(summary).toBeDefined();
+      expect(summary).toContain('subject1=0');
+      expect(summary).toContain('subject2=0');
+    } finally {
+      jest.useRealTimers();
+      logSpy.mockRestore();
+    }
+  });
+
   // fix #2: startDualMeasurementByGroup canTransitionTo 가드 부재 회귀
   // fix 전: experimentMode만 보고 상태 전이 가드 없음 → 측정 불가 상태에서도
   //         start 진행. 본 테스트는 fix 전 RED(throw 기대인데 resolve됨).
