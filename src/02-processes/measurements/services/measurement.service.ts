@@ -40,6 +40,18 @@ const groupFlushIntervals = new Map<string, ReturnType<typeof setInterval>>();
 /** DUAL_2PC groupId별 스트림 건강 추적기 — unsubscribeGroupChannels에서 제거 */
 const groupHealthTrackers = new Map<string, StreamHealthTracker>();
 
+/** groupId → (subjectIndex → 이번 창에서 받은 샘플 수). 요약 로그 전용임 */
+const groupReceivedCounts = new Map<string, Map<number, number>>();
+
+/**
+ * 구독 수신 요약을 남기는 주기(ms).
+ *
+ * flush 타이머(100ms)에 얹어 별도 타이머를 만들지 않는다. 샘플은 subject당 1Hz라
+ * 샘플마다 찍으면 로그가 못 쓰게 커지고, 필요한 것은 "이 subject가 지금도
+ * 들어오고 있나"뿐이다. /proxy 요약과 같은 주기라 두 로그를 나란히 읽을 수 있다.
+ */
+const SUBSCRIBE_SUMMARY_INTERVAL_MS = 10_000;
+
 /** 진행 중인 DUAL_2PC 측정 groupId — 중복 트리거 차단 */
 const dualMeasurementInFlight = new Set<string>();
 
@@ -74,6 +86,15 @@ async function subscribeWithAligner(groupId: string): Promise<void> {
   const healthTracker = new StreamHealthTracker(groupId);
   groupHealthTrackers.set(groupId, healthTracker);
 
+  // 수신 카운터를 구독 전에 subject 1과 2 모두 0으로 등록함. 콜백에서 처음 받을
+  // 때 키를 만들면 한 번도 샘플을 못 보낸 subject가 요약에서 통째로 빠져
+  // 침묵이 보이지 않음 — 이 로그를 넣은 목적이 사라짐 (CodeRabbit PR #102)
+  const received = new Map<number, number>([
+    [1, 0],
+    [2, 0],
+  ]);
+  groupReceivedCounts.set(groupId, received);
+
   // v7 H-PREP-1: subjectIndex는 1-based
   // 기존 Redis 채널 규칙(`mind-signal:{groupId}:subject:{subjectIndex}`) 그대로 유지
   for (const subjectIndex of [1, 2]) {
@@ -85,6 +106,10 @@ async function subscribeWithAligner(groupId: string): Promise<void> {
     // unsubscribeGroupChannels 한 곳에 남긴다
     subscribers.push(subscriber);
     const channel = `mind-signal:${groupId}:subject:${subjectIndex}`;
+    // 구독 채널명을 남긴다. /proxy 핸들러가 publish한 채널명과 나란히 놓으면
+    // group_id 불일치(아무도 듣지 않는 채널로 발행)가 바로 갈린다.
+    // 2026-09-03에 이 대조가 불가능해 subject 1 실종 원인을 특정하지 못했다.
+    console.log(`DUAL_2PC subscribe ${channel}`);
     await subscriber.subscribe(channel, (message: string) => {
       try {
         const parsed = JSON.parse(message);
@@ -118,6 +143,9 @@ async function subscribeWithAligner(groupId: string): Promise<void> {
           ...(frame.data.metrics ? { metrics: frame.data.metrics } : {}),
         };
         healthTracker.recordSample(subjectIndex, serverTimestamp);
+        const counts = groupReceivedCounts.get(groupId);
+        if (counts)
+          counts.set(subjectIndex, (counts.get(subjectIndex) ?? 0) + 1);
         timestampAlignerRegistry.ingest(
           groupId,
           subjectIndex,
@@ -132,10 +160,25 @@ async function subscribeWithAligner(groupId: string): Promise<void> {
 
   // v9 R9-H-2: flush 호출 주체는 subscribeWithAligner 내부 setInterval(100)
   // unsubscribeGroupChannels에서 clearInterval 처리
+  // subject별 수신 건수를 창 단위로 집계해 요약 로그로 낸다. 구독자 콜백에서
+  // 세고 flush 타이머가 주기적으로 비운다. 0으로 떨어진 subject도 계속 보고해야
+  // 침묵과 정상이 구분되므로 키는 지우지 않는다.
+  let lastSummaryAt = Date.now();
+
   const intervalId = setInterval(() => {
     timestampAlignerRegistry.flush(groupId);
     // DE 프로세스가 죽으면 watchdog 스레드도 함께 사라지므로 BE가 독립 감지함
     healthTracker.checkStale(Date.now());
+
+    const now = Date.now();
+    if (now - lastSummaryAt >= SUBSCRIBE_SUMMARY_INTERVAL_MS) {
+      lastSummaryAt = now;
+      const parts = [...received.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([idx, count]) => `subject${idx}=${count}`);
+      console.log(`DUAL_2PC ${groupId} 수신 요약 ${parts.join(' ')}`);
+      for (const key of received.keys()) received.set(key, 0);
+    }
   }, 100);
   // process 종료 시 flush 타이머가 Jest/Node를 block하지 않도록 unref 적용함
   intervalId.unref();
@@ -159,6 +202,7 @@ async function unsubscribeGroupChannels(groupId: string): Promise<void> {
   // SESSION-W005: 건강 추적기는 구독자보다 먼저 등록되므로, 구독자 목록이
   // 없다고 조기 반환하면 추적기가 남는다. 반환 전에 먼저 지움
   groupHealthTrackers.delete(groupId);
+  groupReceivedCounts.delete(groupId);
 
   const subscribers = groupSubscribers.get(groupId);
   if (!subscribers) return;
@@ -172,6 +216,7 @@ async function unsubscribeGroupChannels(groupId: string): Promise<void> {
   }
   groupSubscribers.delete(groupId);
   groupHealthTrackers.delete(groupId);
+  groupReceivedCounts.delete(groupId);
 }
 
 /**
