@@ -6,10 +6,11 @@ import {
 
 jest.mock('../model/consent.schema', () => ({
   __esModule: true,
-  default: { findOneAndUpdate: jest.fn() },
+  default: { findOneAndUpdate: jest.fn(), findOne: jest.fn() },
 }));
 
 const findOneAndUpdate = Consent.findOneAndUpdate as unknown as jest.Mock;
+const findOne = Consent.findOne as unknown as jest.Mock;
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -36,5 +37,30 @@ describe('consentRepository.ensureConsent', () => {
 
     const update = findOneAndUpdate.mock.calls[0][1];
     expect(update.$set).toBeUndefined();
+  });
+});
+
+describe('consentRepository.ensureConsent 동시 upsert 경쟁', () => {
+  it('중복 키(11000)면 이긴 쪽이 만든 문서를 재조회해 반환함', async () => {
+    findOneAndUpdate.mockRejectedValue(
+      Object.assign(new Error('E11000 duplicate key'), { code: 11000 })
+    );
+    findOne.mockResolvedValue({ _id: 'consent_winner' });
+
+    const doc = await consentRepository.ensureConsent('user_1');
+
+    expect(doc).toEqual({ _id: 'consent_winner' });
+    expect(findOne).toHaveBeenCalledWith({ userId: 'user_1' });
+  });
+
+  it('중복 키가 아닌 오류는 그대로 던짐', async () => {
+    findOneAndUpdate.mockRejectedValue(
+      Object.assign(new Error('연결 끊김'), { code: 89 })
+    );
+
+    await expect(consentRepository.ensureConsent('user_1')).rejects.toThrow(
+      '연결 끊김'
+    );
+    expect(findOne).not.toHaveBeenCalled();
   });
 });

@@ -23,18 +23,25 @@ export const PAPER_CONSENT_VERSION_ID = 'PAPER-v1';
 async function ensureConsent(
   userId: Types.ObjectId | string
 ): Promise<ConsentDoc> {
-  return (await Consent.findOneAndUpdate(
-    { userId },
-    {
-      $setOnInsert: {
-        userId,
-        versionId: PAPER_CONSENT_VERSION_ID,
-        isResearchAgreed: true,
-        withdrawnAt: null,
+  try {
+    return (await Consent.findOneAndUpdate(
+      { userId },
+      {
+        $setOnInsert: {
+          userId,
+          versionId: PAPER_CONSENT_VERSION_ID,
+          isResearchAgreed: true,
+          withdrawnAt: null,
+        },
       },
-    },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
-  )) as ConsentDoc;
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    )) as ConsentDoc;
+  } catch (err) {
+    // upsert 경쟁에서 진 쪽이 받는 중복 키 오류임. userId unique 인덱스가
+    // 문서를 하나로 지켜 줬다는 뜻이므로 이긴 쪽이 만든 문서를 돌려줌
+    if ((err as { code?: number })?.code !== 11000) throw err;
+    return (await Consent.findOne({ userId })) as ConsentDoc;
+  }
 }
 
 export const consentRepository = { ensureConsent };
