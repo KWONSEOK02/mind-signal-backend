@@ -302,17 +302,32 @@ describe('DUAL_2PC 측정 라이프사이클 회귀 재현', () => {
       ENGINE_SECRET
     );
 
-    await startMeasurementService('session-id-001');
-    await new Promise<void>((r) => setTimeout(r, 200));
+    try {
+      await startMeasurementService('session-id-001');
 
-    const lines = logSpy.mock.calls.map((args) => args.map(String).join(' '));
-    expect(lines).toContain(
-      `DUAL_2PC subscribe mind-signal:${GROUP_ID}:subject:1`
-    );
-    expect(lines).toContain(
-      `DUAL_2PC subscribe mind-signal:${GROUP_ID}:subject:2`
-    );
-    logSpy.mockRestore();
+      // 고정 대기 대신 두 줄이 나올 때까지 폴링함. 구독 완료 시점은 환경마다
+      // 달라 200ms 고정 대기는 느린 머신에서 깨짐 (CodeRabbit PR #102)
+      const expected = [
+        `DUAL_2PC subscribe mind-signal:${GROUP_ID}:subject:1`,
+        `DUAL_2PC subscribe mind-signal:${GROUP_ID}:subject:2`,
+      ];
+      const linesSoFar = () =>
+        logSpy.mock.calls.map((args) => args.map(String).join(' '));
+      const deadline = Date.now() + 2000;
+      while (
+        Date.now() < deadline &&
+        !expected.every((line) => linesSoFar().includes(line))
+      ) {
+        await new Promise<void>((r) => setTimeout(r, 20));
+      }
+
+      const lines = linesSoFar();
+      expect(lines).toContain(expected[0]);
+      expect(lines).toContain(expected[1]);
+    } finally {
+      // 실패해도 mock 을 되돌림 — 안 그러면 뒤 테스트의 console.log 가 먹통이 됨
+      logSpy.mockRestore();
+    }
   });
 
   // fix #2: startDualMeasurementByGroup canTransitionTo 가드 부재 회귀

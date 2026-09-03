@@ -275,9 +275,7 @@ export class SocketService {
             metrics,
           } = parsed.data;
           const channel = `mind-signal:${groupId}:subject:${subjectIndex}`;
-          const tally = tallyFor(subjectIndex);
-          tally.received++;
-          tally.channels.add(channel);
+          tallyFor(subjectIndex).received++;
           try {
             // redisService.client는 publish 전용 - 모든 subscribe는 duplicate() 경유라
             // 이 공유 client는 PubSub 모드에 진입하지 않음 (measurement.service.ts 정합).
@@ -292,7 +290,13 @@ export class SocketService {
                 ...(metrics ? { metrics } : {}),
               })
             );
-            tally.published++;
+            // await 사이에 요약 타이머가 돌면 위에서 잡아 둔 tally 객체는
+            // 맵에서 교체된 뒤다. 그 낡은 객체를 올리면 성공한 publish가
+            // 다음 요약에서 사라진다. 성공 시점에 다시 조회함 (CodeRabbit PR #102).
+            // 채널도 여기서 기록해 실패한 publish가 성공처럼 보이지 않게 함
+            const publishedTally = tallyFor(subjectIndex);
+            publishedTally.published++;
+            publishedTally.channels.add(channel);
             ack?.({ ok: true });
           } catch (err) {
             // Redis 일시 장애는 재시도 허용함 - 소켓은 죽이지 않음

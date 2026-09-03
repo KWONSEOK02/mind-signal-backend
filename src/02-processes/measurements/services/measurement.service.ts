@@ -86,6 +86,15 @@ async function subscribeWithAligner(groupId: string): Promise<void> {
   const healthTracker = new StreamHealthTracker(groupId);
   groupHealthTrackers.set(groupId, healthTracker);
 
+  // 수신 카운터를 구독 전에 subject 1과 2 모두 0으로 등록함. 콜백에서 처음 받을
+  // 때 키를 만들면 한 번도 샘플을 못 보낸 subject가 요약에서 통째로 빠져
+  // 침묵이 보이지 않음 — 이 로그를 넣은 목적이 사라짐 (CodeRabbit PR #102)
+  const received = new Map<number, number>([
+    [1, 0],
+    [2, 0],
+  ]);
+  groupReceivedCounts.set(groupId, received);
+
   // v7 H-PREP-1: subjectIndex는 1-based
   // 기존 Redis 채널 규칙(`mind-signal:{groupId}:subject:{subjectIndex}`) 그대로 유지
   for (const subjectIndex of [1, 2]) {
@@ -154,9 +163,6 @@ async function subscribeWithAligner(groupId: string): Promise<void> {
   // subject별 수신 건수를 창 단위로 집계해 요약 로그로 낸다. 구독자 콜백에서
   // 세고 flush 타이머가 주기적으로 비운다. 0으로 떨어진 subject도 계속 보고해야
   // 침묵과 정상이 구분되므로 키는 지우지 않는다.
-  const received =
-    groupReceivedCounts.get(groupId) ?? new Map<number, number>();
-  groupReceivedCounts.set(groupId, received);
   let lastSummaryAt = Date.now();
 
   const intervalId = setInterval(() => {
@@ -165,10 +171,7 @@ async function subscribeWithAligner(groupId: string): Promise<void> {
     healthTracker.checkStale(Date.now());
 
     const now = Date.now();
-    if (
-      now - lastSummaryAt >= SUBSCRIBE_SUMMARY_INTERVAL_MS &&
-      received.size > 0
-    ) {
+    if (now - lastSummaryAt >= SUBSCRIBE_SUMMARY_INTERVAL_MS) {
       lastSummaryAt = now;
       const parts = [...received.entries()]
         .sort((a, b) => a[0] - b[0])
