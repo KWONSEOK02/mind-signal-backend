@@ -2,7 +2,7 @@
 
 ---
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-09-03
 - **Applies to**: BE
 - **Deciders**: @KWONSEOK02
