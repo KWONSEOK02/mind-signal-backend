@@ -281,6 +281,40 @@ describe('DUAL_2PC 측정 라이프사이클 회귀 재현', () => {
     );
   });
 
+  // 2026-09-03 회귀 방어: subject 1이 화면에서 사라졌을 때 BE가 어떤 채널을
+  // 구독했는지 남기지 않아 group_id 불일치 가설을 확인도 배제도 못 했다.
+  // /proxy 핸들러의 publish 채널명과 짝을 이루는 로그이므로 지우지 말 것.
+  it('구독한 채널명을 subject별로 로그에 남김 — publish 채널과 대조용', async () => {
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    (Session.findById as jest.Mock).mockResolvedValue(
+      makeDualSession(GROUP_ID)
+    );
+    engineRegistryService.registerDual(
+      GROUP_ID,
+      1,
+      'http://de1:5002',
+      ENGINE_SECRET
+    );
+    engineRegistryService.registerDual(
+      GROUP_ID,
+      2,
+      'http://de2:5002',
+      ENGINE_SECRET
+    );
+
+    await startMeasurementService('session-id-001');
+    await new Promise<void>((r) => setTimeout(r, 200));
+
+    const lines = logSpy.mock.calls.map((args) => args.map(String).join(' '));
+    expect(lines).toContain(
+      `DUAL_2PC subscribe mind-signal:${GROUP_ID}:subject:1`
+    );
+    expect(lines).toContain(
+      `DUAL_2PC subscribe mind-signal:${GROUP_ID}:subject:2`
+    );
+    logSpy.mockRestore();
+  });
+
   // fix #2: startDualMeasurementByGroup canTransitionTo 가드 부재 회귀
   // fix 전: experimentMode만 보고 상태 전이 가드 없음 → 측정 불가 상태에서도
   //         start 진행. 본 테스트는 fix 전 RED(throw 기대인데 resolve됨).
