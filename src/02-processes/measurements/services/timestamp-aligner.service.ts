@@ -113,22 +113,21 @@ class TimestampAligner {
    *
    * - |ts_1 - ts_2| ≤ toleranceMs 인 쌍 생성
    * - AlignedSample.subject_1 / subject_2 필드로 매핑 (1-based)
-   * - 매칭 실패 샘플은 Date.now() - ts > 500ms 시 drop (timestamp_min-aged)
+   * - 매칭 실패 샘플은 toleranceMs 초과 대기 시 상대를 null 로 두고 단독 emit
    * - 정렬된 쌍은 SocketService.emitToGroup(groupId, 'aligned_pair', alignedSample) 전송
    *
    * @returns 정렬된 AlignedSample 배열
    */
   flush(): AlignedSample[] {
     const now = Date.now();
-    const expireThresholdMs = 500;
     const aligned: AlignedSample[] = [];
 
-    const buf1 = this.buffer.get(1) ?? [];
-    const buf2 = this.buffer.get(2) ?? [];
-
-    // 만료 항목 drop — 매칭 실패 샘플 Date.now() - ts > 500ms 시 제거
-    const fresh1 = buf1.filter((e) => now - e.ts <= expireThresholdMs);
-    const fresh2 = buf2.filter((e) => now - e.ts <= expireThresholdMs);
+    // 만료 drop 없음. 미매칭 샘플은 아래 단독 emit 이 tolerance 초과 즉시
+    // 내보내므로 버퍼가 쌓이지 않음. 이전의 500ms 만료 필터는 이벤트 루프가
+    // 잠깐 멈추면 샘플이 tolerance 창을 건너뛰어 조용히 사라지는 구멍이었음
+    // (CodeRabbit #106)
+    const fresh1 = this.buffer.get(1) ?? [];
+    const fresh2 = this.buffer.get(2) ?? [];
 
     // 그리디 매칭: buf1 각 항목에 대해 toleranceMs 내 buf2 최근접 항목 탐색
     // 매칭 여부를 인덱스로 추적하여 버퍼 업데이트에 활용함
@@ -169,7 +168,7 @@ class TimestampAligner {
       }
     }
 
-    // 미매칭 항목만 버퍼에 유지 — 만료 항목(fresh 필터에서 제외된 것)은 자동 drop됨
+    // 미매칭 항목만 남김
     const newBuf1 = fresh1.filter((_, idx) => !usedIdx1.has(idx));
     const newBuf2 = fresh2.filter((_, idx) => !usedIdx2.has(idx));
 

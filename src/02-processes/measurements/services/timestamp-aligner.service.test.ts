@@ -3,7 +3,7 @@
  *
  * 검증 항목:
  *   - ±200ms 내 두 subject 샘플 → AlignedSample 생성 + SocketService.emitToGroup 호출
- *   - 500ms 초과 샘플 → drop (expired)
+ *   - tolerance 초과 미매칭 샘플 → 단독 emit (만료 drop 없음)
  *   - registry 수명 관리 — getOrCreate, cleanup
  *   - v8 C-1: brain_sync_all 타입 가드 (measurement.service 소스 검증)
  */
@@ -180,42 +180,54 @@ describe('[TS-STREAM-01] timestampAlignerRegistry — BE-aligner', () => {
   });
 
   // ============================================================
-  // 500ms 만료 drop
+  // 지연 샘플 보존 — flush 가 늦어져도 drop 하지 않음
   // ============================================================
 
-  describe('500ms 만료 drop', () => {
-    it('500ms 초과 샘플 → flush 시 drop됨 (매칭 없음)', () => {
+  describe('지연 샘플 보존 (구 500ms 만료 drop 대체)', () => {
+    // 이전에는 500ms 넘은 미매칭 샘플을 조용히 버렸다. flush 는 100ms 마다 돌지만
+    // 이벤트 루프가 잠깐 멈추면 샘플이 tolerance 창을 건너뛰어 사라졌다. 늦게
+    // 본 샘플도 정상 데이터라 pair 또는 단독으로 반드시 내보냄 (CodeRabbit #106)
+    it('flush 가 600ms 늦어도 tolerance 내 두 샘플은 pair 로 emit됨', () => {
       // Arrange
-      const groupId = 'grp-expire';
+      const groupId = 'grp-late-pair';
       timestampAlignerRegistry.getOrCreate(groupId, 200);
-      // 과거 타임스탬프 (600ms 이전) 샘플 적재
       const oldTs = Date.now() - 600;
+      const sample1 = makeSample(1.0);
+      const sample2 = makeSample(2.0);
 
       // Act
-      timestampAlignerRegistry.ingest(groupId, 1, makeSample(), oldTs);
-      timestampAlignerRegistry.ingest(groupId, 2, makeSample(), oldTs);
-      // flush 시 Date.now() - oldTs > 500ms → 만료 drop
+      timestampAlignerRegistry.ingest(groupId, 1, sample1, oldTs);
+      timestampAlignerRegistry.ingest(groupId, 2, sample2, oldTs);
       const result = timestampAlignerRegistry.flush(groupId);
 
-      // Assert — 만료로 drop → 빈 배열 반환
-      expect(result).toHaveLength(0);
+      // Assert
+      expect(result).toHaveLength(1);
+      expect(result[0].subject_1).toEqual(sample1);
+      expect(result[0].subject_2).toEqual(sample2);
     });
 
-    it('만료 샘플은 버퍼에서 제거되고 다음 flush에서 재처리 안 됨', () => {
-      // Arrange
-      const groupId = 'grp-expire-clean';
+    it('flush 가 늦어 둘 다 500ms 를 넘겼고 서로 tolerance 밖이면 각각 단독 emit됨', () => {
+      // Arrange — 300ms 위상 차 스트림에서 이벤트 루프가 900ms 멈춘 상황
+      const groupId = 'grp-stall';
       timestampAlignerRegistry.getOrCreate(groupId, 200);
-      const oldTs = Date.now() - 600;
+      const now = Date.now();
+      const sample1 = makeSample(1.0);
+      const sample2 = makeSample(2.0);
+      timestampAlignerRegistry.ingest(groupId, 1, sample1, now - 900);
+      timestampAlignerRegistry.ingest(groupId, 2, sample2, now - 600);
 
-      // Act — 1차 flush에서 drop
-      timestampAlignerRegistry.ingest(groupId, 1, makeSample(), oldTs);
-      timestampAlignerRegistry.flush(groupId);
+      // Act
+      const result = timestampAlignerRegistry.flush(groupId);
 
-      // 2차 flush — 버퍼가 비어 있어야 함
-      const result2 = timestampAlignerRegistry.flush(groupId);
-
-      // Assert
-      expect(result2).toHaveLength(0);
+      // Assert — 하나도 버리지 않고 둘 다 단독으로 나감. 버퍼는 비어 다음 flush 재emit 없음
+      expect(result).toHaveLength(2);
+      expect(
+        result.map((s) => [s.subject_1 !== null, s.subject_2 !== null])
+      ).toEqual([
+        [true, false],
+        [false, true],
+      ]);
+      expect(timestampAlignerRegistry.flush(groupId)).toHaveLength(0);
     });
   });
 
