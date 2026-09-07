@@ -127,6 +127,7 @@ jest.mock('@06-entities/sessions', () => ({
 // imports (mock 선언 후)
 // ---------------------------------------------------------------------------
 import { engineRegistryService } from '@02-processes/engine/services/engine-registry.service';
+import { dualTriggerService } from '@02-processes/engine/services/dual-2pc-trigger.service';
 import {
   startMeasurementService,
   startDualMeasurementByGroup,
@@ -820,6 +821,7 @@ describe('[SESSION-W005] DUAL_2PC 실패 경로 자원 회수', () => {
       .mockRejectedValueOnce(new Error('DE 2 unreachable'));
 
     const cleanupSpy = jest.spyOn(engineRegistryService, 'cleanupGroup');
+    const resetStatusSpy = jest.spyOn(dualTriggerService, 'resetStatus');
 
     // Act
     await startDualMeasurementByGroup(GROUP_ID);
@@ -828,6 +830,10 @@ describe('[SESSION-W005] DUAL_2PC 실패 경로 자원 회수', () => {
     // Assert — 정지 시도가 있어야 함
     const stopMock = engineProxyService.streamStop as jest.Mock;
     expect(stopMock).toHaveBeenCalled();
+
+    // Assert — registry-status 캐시도 함께 지워야 함. 남으면 ready=true 가 GC
+    // 30분까지 살아 복원된 운영자 화면에 `실험 시작`이 다시 뜸 (2026-09-07)
+    expect(resetStatusSpy).toHaveBeenCalledWith(GROUP_ID);
 
     // Assert — 순서가 핵심임. registry 를 먼저 지우면 streamStop 이 engineUrl 을
     // 찾지 못해 legacy 폴백 503 이 된다. 호출 여부만 보면 이 결함을 못 잡는다.
