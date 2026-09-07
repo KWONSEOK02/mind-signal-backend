@@ -422,6 +422,7 @@ function startDualMeasurement(groupId: string): void {
 
       // T4 fix: 반쪽 등록 잔류 방지 — dualRegistry cleanup 호출함 (LD-4)
       engineRegistryService.cleanupGroup(groupId);
+      dualTriggerService.resetStatus(groupId);
       // 실패 통보 (60초 timeout + streamStart 실패 포함)
       SocketService.emitToGroup(groupId, 'dual-session-failed', {
         groupId,
@@ -666,6 +667,9 @@ export const stopMeasurementService = async (
       });
       timestampAlignerRegistry.cleanup(session.groupId);
       engineRegistryService.cleanupGroup(session.groupId);
+      // registry-status 캐시(ready=true)는 GC 30분까지 남아, 종료된 그룹을
+      // 새로고침으로 복원한 운영자 화면에 `실험 시작`이 다시 뜸 (2026-09-07)
+      dualTriggerService.resetStatus(session.groupId);
       // subscribeWithAligner가 생성한 Redis subscriber 2개 + flush interval 전부 해제
       await unsubscribeGroupChannels(session.groupId);
     }
